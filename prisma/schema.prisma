@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  ORGANIZER
+  ATTENDEE
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique @db.VarChar(191)
+  fullName      String         @db.VarChar(191)
+  passwordHash  String         @db.VarChar(255)
+  role          UserRole       @default(ATTENDEE)
+  registrations Registration[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  feedback      EventFeedback[]
+}
+
+model Event {
+  id             String         @id @default(cuid())
+  name           String         @db.VarChar(191)
+  description    String?        @db.Text
+  location       String?        @db.VarChar(255)
+  startsAt       DateTime
+  endsAt         DateTime
+  capacity       Int?
+  status         EventStatus    @default(DRAFT)
+  schedules      ScheduleItem[]
+  registrations  Registration[]
+  feedback       EventFeedback[]
+  budgetItems    BudgetItem[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status, startsAt])
+}
+
+model ScheduleItem {
+  id          String   @id @default(cuid())
+  eventId     String
+  title       String   @db.VarChar(191)
+  description String?  @db.Text
+  startsAt    DateTime
+  endsAt      DateTime
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, startsAt])
+}
+
+model Registration {
+  id        String             @id @default(cuid())
+  userId    String
+  eventId   String
+  status    RegistrationStatus @default(CONFIRMED)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticket    Ticket?
+  createdAt DateTime           @default(now())
+
+  @@unique([userId, eventId])
+  @@index([eventId, status])
+}
+
+model Ticket {
+  id             String       @id @default(cuid())
+  registrationId String       @unique
+  qrCode         String       @unique @db.VarChar(191)
+  checkedInAt    DateTime?
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+}
+
+model EventFeedback {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  rating    Int
+  comment   String?  @db.Text
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model BudgetItem {
+  id          String   @id @default(cuid())
+  eventId     String
+  name        String   @db.VarChar(191)
+  category    String   @db.VarChar(100)
+  amount      Decimal  @db.Decimal(12, 2)
+  isIncome    Boolean  @default(false)
+  note        String?  @db.Text
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @db.VarChar(191)
+  action     String   @db.VarChar(100)
+  entityType String   @db.VarChar(100)
+  entityId   String?  @db.VarChar(191)
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}
