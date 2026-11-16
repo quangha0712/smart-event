@@ -1,5 +1,6 @@
 import { Body, Controller, Get, NotFoundException, Param, Post } from "@nestjs/common";
-import { EventsService, NewEventInput } from "./events.service";
+import { CreateEventDto } from "./dto/create-event.dto";
+import { EventsService } from "./events.service";
 
 @Controller("events")
 export class EventsController {
@@ -18,7 +19,7 @@ export class EventsController {
   }
 
   @Post()
-  create(@Body() input: NewEventInput) {
+  create(@Body() input: CreateEventDto) {
     return this.events.create(input);
   }
 }
