@@ -1,6 +1,8 @@
 import { Controller, Get, Module } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 
 @Controller("health")
+@ApiTags("Health")
 class HealthController {
   @Get()
   getHealth() {

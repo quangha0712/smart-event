@@ -8,8 +8,12 @@
 
 ## Quy trình
 
-1. Cấu hình biến môi trường từ `.env.example`.
-2. Khởi động database và chờ healthcheck.
-3. Áp dụng Prisma migration và seed dữ liệu.
-4. Khởi chạy API và web, kiểm tra `/api/health`.
-5. Chạy smoke test luồng demo và lưu minh chứng.
+1. Cài Node.js 20+, npm 10+ và khởi động Docker Desktop.
+2. Sao chép `.env.example` thành `.env`; điền cấu hình AI nếu cần gọi AI.
+3. Chạy `npm install` tại thư mục gốc.
+4. Chạy duy nhất `npm run dev` để khởi động web và API. Script API tự bật MySQL, đợi healthcheck, chạy Prisma generate/migration/seed rồi mới khởi động NestJS; web Next.js chạy đồng thời.
+5. Mở web tại `http://localhost:3000`, kiểm tra API tại `http://localhost:3001/api/health`.
+6. Seed in khoảng `from`/`to` của dữ liệu check-in mẫu để dùng khi gọi `POST /api/ai/check-in-analysis`.
+7. Chạy test bằng `npm run test --workspace apps/api`; chỉ ghi kết quả vào `tests/test-evidence/` sau khi thực sự chạy.
+
+Để chỉ chạy riêng API, dùng `npm run dev:api`; API cũng tự bật MySQL/migration/seed. Các lệnh này yêu cầu Docker hoạt động, `.env` có `DATABASE_URL` hợp lệ và dependencies đã cài.

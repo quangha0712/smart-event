@@ -1,7 +1,9 @@
 import { Body, Controller, Get, NotFoundException, Param, Post } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { EventsService, NewEventInput } from "./events.service";
 
 @Controller("events")
+@ApiTags("Events")
 export class EventsController {
   constructor(private readonly events: EventsService) {}
 

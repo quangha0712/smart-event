@@ -26,6 +26,12 @@ enum RegistrationStatus {
   CANCELLED
 }
 
+enum CheckInAttemptStatus {
+  ACCEPTED
+  ALREADY_USED
+  INVALID
+}
+
 model User {
   id            String         @id @default(cuid())
   email         String         @unique @db.VarChar(191)
@@ -46,11 +52,13 @@ model Event {
   startsAt       DateTime
   endsAt         DateTime
   capacity       Int?
+  registeredCount Int           @default(0)
   status         EventStatus    @default(DRAFT)
   schedules      ScheduleItem[]
   registrations  Registration[]
   feedback       EventFeedback[]
   budgetItems    BudgetItem[]
+  checkInAttempts CheckInAttempt[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -89,7 +97,23 @@ model Ticket {
   qrCode         String       @unique @db.VarChar(191)
   checkedInAt    DateTime?
   registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  checkInAttempts CheckInAttempt[]
   createdAt      DateTime     @default(now())
+}
+
+model CheckInAttempt {
+  id        String                @id @default(cuid())
+  eventId   String
+  ticketId  String?
+  deviceId  String                @db.VarChar(191)
+  status    CheckInAttemptStatus
+  scannedAt DateTime              @default(now())
+  event     Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticket    Ticket?               @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@index([eventId, scannedAt])
+  @@index([eventId, status, scannedAt])
+  @@index([ticketId, scannedAt])
 }
 
 model EventFeedback {

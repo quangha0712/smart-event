@@ -4,16 +4,14 @@ services:
     container_name: smart-event-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_dev_password
+      MYSQL_ROOT_PASSWORD: "557799"
       MYSQL_DATABASE: smart_event
-      MYSQL_USER: smart_event
-      MYSQL_PASSWORD: smart_event_dev
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - smart_event_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_dev_password"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p557799"]
       interval: 5s
       timeout: 5s
       retries: 20

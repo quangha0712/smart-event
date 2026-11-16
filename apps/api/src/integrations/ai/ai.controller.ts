@@ -1,9 +1,11 @@
 import { BadRequestException, Body, Controller, Param, Post } from "@nestjs/common";
+import { ApiBody, ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "../../prisma/prisma.module";
 import { AiService } from "./ai.service";
+import { CHECKIN_RULE_WINDOWS } from "./check-in-analysis.policy";
+import { CheckInService } from "../../check-in/check-in.service";
 import {
   BudgetEstimateInput,
-  CheckInAnalysisInput,
   ProjectSummaryInput,
   RequirementsDraftInput,
 } from "./ai.types";
@@ -30,8 +32,13 @@ function requireCount(value: unknown, field: string, max: number): number {
 }
 
 @Controller("ai")
+@ApiTags("AI")
 export class AiController {
-  constructor(private readonly ai: AiService, private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly ai: AiService,
+    private readonly prisma: PrismaService,
+    private readonly checkIn: CheckInService,
+  ) {}
 
   @Post("project-summary")
   projectSummary(@Body() body: ProjectSummaryInput) {
@@ -70,21 +77,40 @@ export class AiController {
   }
 
   @Post("check-in-analysis")
-  checkInAnalysis(@Body() body: CheckInAnalysisInput) {
-    const totalAttempts = requireCount(body?.totalAttempts, "totalAttempts", 1_000_000);
-    const accepted = requireCount(body?.accepted, "accepted", 1_000_000);
-    const repeatedScans = requireCount(body?.repeatedScans, "repeatedScans", 1_000_000);
-    const invalidCodes = requireCount(body?.invalidCodes, "invalidCodes", 1_000_000);
-    if (accepted + repeatedScans + invalidCodes > totalAttempts) {
-      throw new BadRequestException("Tổng các loại lượt quét không được vượt totalAttempts.");
+  @ApiBody({
+    schema: {
+      type: "object",
+      required: ["eventId", "from", "to"],
+      properties: {
+        eventId: { type: "string", example: "demo-smart-event" },
+        from: { type: "string", format: "date-time", example: "2026-11-15T08:00:00.000Z" },
+        to: { type: "string", format: "date-time", example: "2026-11-15T09:00:00.000Z" },
+      },
+    },
+  })
+  async checkInAnalysis(@Body() body: {
+    eventId?: string;
+    from?: string;
+    to?: string;
+  }) {
+    const eventId = requireText(body?.eventId, "eventId", 191);
+    const from = requireText(body?.from, "from", 40);
+    const to = requireText(body?.to, "to", 40);
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (Number.isNaN(fromDate.valueOf()) || Number.isNaN(toDate.valueOf()) || fromDate > toDate) {
+      throw new BadRequestException("from/to phải là thời điểm hợp lệ và from không được sau to.");
     }
+    const maxRangeMs = 30 * 24 * 60 * 60_000;
+    if (toDate.valueOf() - fromDate.valueOf() > maxRangeMs) {
+      throw new BadRequestException("Khoảng phân tích tối đa là 30 ngày.");
+    }
+    const { windowMinutes: _internalWindowMinutes, ...metrics } = await this.checkIn.getSummary(eventId, fromDate, toDate);
+    const ticketPatterns = await this.checkIn.getTicketAnalysisPatterns(eventId, fromDate, toDate);
     return this.ai.checkInAnalysis({
-      eventId: requireText(body?.eventId, "eventId", 191),
-      totalAttempts,
-      accepted,
-      repeatedScans,
-      invalidCodes,
-      windowMinutes: requireCount(body?.windowMinutes, "windowMinutes", 100_000),
+      ...metrics,
+      ruleWindows: { ...CHECKIN_RULE_WINDOWS },
+      ticketPatterns,
     });
   }
 

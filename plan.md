@@ -10,6 +10,7 @@ Tài liệu này chốt kiến trúc codebase, công nghệ, phạm vi AI và đ
 |---|---|---|
 | Frontend | Next.js 14, React 18, TypeScript | Trang người dùng, ban tổ chức, dashboard và AI insights |
 | Backend | NestJS 10, TypeScript, REST API | Nghiệp vụ, API, tích hợp database và AI |
+| Tài liệu API | Swagger/OpenAPI (`@nestjs/swagger` 7) | Một Swagger UI dùng chung cho mọi controller NestJS đã đăng ký trong `AppModule` |
 | Database | MySQL 8.4 | Lưu tài khoản, sự kiện, lịch trình, đăng ký, vé, đánh giá và ngân sách |
 | ORM/migration | Prisma 6 | Schema database, migration, truy vấn và seed |
 | Chạy database local | Docker Compose | Khởi động MySQL cùng volume và health check |
@@ -37,8 +38,9 @@ smart-event/
 │  │  ├─ nest-cli.json
 │  │  ├─ tsconfig.json
 │  │  ├─ tsconfig.build.json
+│  │  ├─ jest.config.cjs
 │  │  ├─ src/
-│  │  │  ├─ main.ts
+│  │  │  ├─ main.ts                         # Cấu hình prefix /api, Swagger /docs và OpenAPI /docs-json
 │  │  │  ├─ app.module.ts
 │  │  │  ├─ health/
 │  │  │  │  └─ health.module.ts
@@ -56,10 +58,21 @@ smart-event/
 │  │  │  ├─ schedules/
 │  │  │  │  └─ README.md
 │  │  │  ├─ registrations/
+│  │  │  │  ├─ registration.types.ts
+│  │  │  │  ├─ registrations.controller.ts
+│  │  │  │  ├─ registrations.module.ts
+│  │  │  │  ├─ registrations.service.ts
 │  │  │  │  └─ README.md
 │  │  │  ├─ tickets/
+│  │  │  │  ├─ tickets.controller.ts
+│  │  │  │  ├─ tickets.module.ts
+│  │  │  │  ├─ tickets.service.ts
 │  │  │  │  └─ README.md
 │  │  │  ├─ check-in/
+│  │  │  │  ├─ check-in.controller.ts
+│  │  │  │  ├─ check-in.module.ts
+│  │  │  │  ├─ check-in.service.ts
+│  │  │  │  ├─ check-in.types.ts
 │  │  │  │  └─ README.md
 │  │  │  ├─ event-feedback/
 │  │  │  │  └─ README.md
@@ -76,6 +89,9 @@ smart-event/
 │  │  │  ├─ reports/
 │  │  │  │  └─ README.md
 │  │  │  ├─ audit-log/
+│  │  │  │  ├─ audit-log.controller.ts
+│  │  │  │  ├─ audit-log.module.ts
+│  │  │  │  ├─ audit-log.service.ts
 │  │  │  │  └─ README.md
 │  │  │  ├─ prisma/
 │  │  │  │  └─ prisma.module.ts
@@ -85,6 +101,7 @@ smart-event/
 │  │  │     │  ├─ ai.module.ts
 │  │  │     │  ├─ ai.service.ts
 │  │  │     │  ├─ ai.types.ts
+│  │  │     │  ├─ check-in-analysis.policy.ts
 │  │  │     │  ├─ README.md
 │  │  │     │  └─ prompts/
 │  │  │     │     ├─ project-summary.prompt.ts
@@ -92,12 +109,13 @@ smart-event/
 │  │  │     │     ├─ budget-estimate.prompt.ts
 │  │  │     │     ├─ checkin-analysis.prompt.ts
 │  │  │     │     └─ feedback-insights.prompt.ts
-│  │  │     ├─ nfc/
-│  │  │     │  └─ README.md
-│  │  │     └─ iot/
-│  │  │        └─ README.md
 │  │  └─ test/
 │  │     ├─ README.md
+│  │     ├─ ai.service.spec.ts
+│  │     ├─ audit-log.service.spec.ts
+│  │     ├─ check-in.service.spec.ts
+│  │     ├─ registrations.service.spec.ts
+│  │     ├─ tickets.service.spec.ts
 │  │     └─ jest-e2e.json
 │  │
 │  └─ web/
@@ -142,7 +160,12 @@ smart-event/
 │  ├─ seed.ts
 │  └─ migrations/
 │     ├─ migration_lock.toml
-│     └─ 20261114000000_init/migration.sql
+│     ├─ 20261114000000_init/migration.sql
+│     ├─ 20261114120000_backend2_checkin/migration.sql
+│     └─ 20261115120000_checkin_device_id/migration.sql
+│
+├─ scripts/
+│  └─ dev-bootstrap.mjs             # Docker MySQL + migration + seed tự động khi chạy API
 │
 ├─ infra/
 │  ├─ docker-compose.yml
@@ -227,7 +250,7 @@ smart-event/
 - TV3 là người phụ trách kết nối kỹ thuật chung: đọc biến môi trường, gọi endpoint provider, nhận JSON, xử lý timeout/lỗi và kiểm tra/tính lại tổng dự toán.
 - Các thành viên khác sở hữu prompt, endpoint method và nghiệp vụ AI được giao; không sửa phần provider chung của TV3.
 - Hiện chưa có xác thực, phân quyền hay hạn mức theo tài khoản; API AI chỉ dùng local/dev. Cần bổ sung auth, quota và audit trước khi đưa lên môi trường dùng thật.
-- Kết quả AI phải được người phụ trách rà soát. Dự toán chỉ là ước lượng; phân tích check-in chỉ đưa tín hiệu cần kiểm tra; không tự động từ chối người tham dự hoặc quyết định chi tiêu.
+- Kết quả AI phải được người phụ trách rà soát. Dự toán chỉ là ước lượng; phân tích check-in có thể trả phân loại theo chính sách demo dựa trên đánh giá LLM và log từng vé, nhưng không tự động từ chối người tham dự hoặc thay thế xác minh thực tế.
 
 ### 4.2 Năm tính năng AI và chủ sở hữu
 
@@ -236,7 +259,7 @@ smart-event/
 | TV1 – PM | Tóm tắt tiến độ, việc còn tồn, rủi ro và hành động tiếp theo từ dữ liệu PM nhập | `POST /api/ai/project-summary` | `prompts/project-summary.prompt.ts` | `AiController.projectSummary`, `AiService.projectSummary` |
 | TV2 – BA | Tạo bản nháp FR/NFR, use case, giả định và câu hỏi cần làm rõ từ mô tả nghiệp vụ | `POST /api/ai/requirements-draft` | `prompts/requirements-draft.prompt.ts` | `AiController.requirementsDraft`, `AiService.requirementsDraft` |
 | TV3 – Backend 1 | Gợi ý dự toán sự kiện theo loại, số người, thời lượng, địa điểm và ràng buộc | `POST /api/ai/budget-estimate` | `prompts/budget-estimate.prompt.ts` | `AiController.budgetEstimate`, `AiService.budgetEstimate`; đồng thời sở hữu provider chung |
-| TV4 – Backend 2 | Phân tích tổng số lượt check-in, lượt hợp lệ, quét lặp, mã sai theo khoảng thời gian | `POST /api/ai/check-in-analysis` | `prompts/checkin-analysis.prompt.ts` | `AiController.checkInAnalysis`, `AiService.checkInAnalysis` |
+| TV4 – Backend 2 | Gửi thống kê và lịch sử quét từng vé cho LLM; backend hậu xử lý kết quả theo chính sách demo để trả phân loại vé | `POST /api/ai/check-in-analysis` | `prompts/checkin-analysis.prompt.ts` | `AiController.checkInAnalysis`, `AiService.checkInAnalysis` |
 | TV5 – Frontend/Tester | Tổng hợp chủ đề phản hồi sự kiện và gợi ý cải thiện cho ban tổ chức | `POST /api/ai/events/:eventId/feedback-insights` | `prompts/feedback-insights.prompt.ts` | `AiController.feedbackInsights`, `AiService.feedbackInsights`; UI tại `apps/web/src/features/ai/` |
 
 ## 5. Phân công codebase theo thành viên
@@ -293,20 +316,67 @@ smart-event/
 
 ### Thành viên 4 – Backend 2 / Giám sát kỹ thuật
 
-**Phải hoàn thành trong codebase**
+**Phạm vi sở hữu**
 
-1. Hoàn thiện `prisma/schema.prisma`, migrations, seed và `apps/api/src/prisma/`.
-2. Hoàn thiện `apps/api/src/registrations/`, `tickets/`, `check-in/`, `integrations/nfc/`, `integrations/iot/`, `audit-log/`.
-3. Hoàn thiện cấu hình triển khai trong `infra/` và `docs/06-deployment/deployment-plan.md`.
-4. Hoàn thiện `quality-plan.md`, `evm-status.md`, `change-log.md`.
-5. Hoàn thiện AI phân tích check-in: prompt `checkin-analysis.prompt.ts`, method `checkInAnalysis` controller/service; chỉ tạo cảnh báo tham khảo, không tự chặn vé/người.
+TV4 sở hữu database và luồng đăng ký → vé QR → check-in, cùng giám sát kỹ thuật/triển khai Backend 2. Các module `staff/`, `vendors/`, `sponsors/`, `funding/`, `budget/` thuộc TV3 theo phân công codebase; TV4 không triển khai lại các module đó.
 
-**Phần báo cáo phải tự viết**
+**Việc bắt buộc phải hoàn thành trong codebase**
 
-- Phần VI – tiểu mục database, đăng ký, QR, check-in và triển khai.
-- Phần VII – tiểu mục nhật ký kỹ thuật, EVM, chất lượng và kiểm soát thay đổi.
-- Phần IX – tiểu mục database, migration và mã nguồn Backend 2.
-- Phần X – kết quả, hạn chế và hướng phát triển Backend 2.
+1. **Database và migration**
+   - Hoàn thiện model `Registration` và `Ticket` trong `prisma/schema.prisma`.
+   - Thêm model lưu từng lượt quét check-in để phân biệt `ACCEPTED`, `ALREADY_USED`, `INVALID`, có `eventId`, `deviceId`, thời điểm; chỉ lưu `ticketId` nếu xác định được, không lưu nguyên mã QR hoặc thông tin nhạy cảm.
+   - Tạo migration trong `prisma/migrations/`; cập nhật `prisma/seed.ts` với dữ liệu sự kiện, đăng ký, vé và ba chuỗi quét demo có `deviceId`, mỗi chuỗi bao phủ một rule AI.
+   - Dùng `apps/api/src/prisma/prisma.module.ts` để truy cập database.
+
+2. **Đăng ký tham dự** — `apps/api/src/registrations/`
+   - Tạo controller, service và DTO cho tạo/xem/hủy đăng ký.
+   - Kiểm tra sự kiện đang nhận đăng ký, sức chứa còn chỗ và ngăn đăng ký trùng.
+   - Bảo đảm một người chỉ có một đăng ký cho cùng sự kiện và trạng thái được lưu trong MySQL.
+
+3. **Vé QR** — `apps/api/src/tickets/`
+   - Cấp mã vé duy nhất cho đăng ký hợp lệ; cung cấp API tra cứu và xác thực vé.
+   - QR chỉ chứa mã tra cứu, không nhúng thông tin cá nhân trực tiếp.
+
+4. **Check-in** — `apps/api/src/check-in/`
+   - Kiểm tra vé tồn tại, thuộc đúng sự kiện và chưa được sử dụng; nhận `deviceId` ổn định của máy quét cho mỗi lượt gọi.
+   - Ghi nhận check-in theo cách an toàn với hai lượt quét gần đồng thời; mỗi vé chỉ được check-in thành công một lần.
+   - Lưu kết quả quét thành công, quét lặp và mã không hợp lệ để truy vết/thống kê.
+
+5. **AI phân tích check-in** — `apps/api/src/integrations/ai/`
+   - TV4 sở hữu `prompts/checkin-analysis.prompt.ts`, method `checkInAnalysis` trong `ai.controller.ts`/`ai.service.ts` và endpoint `POST /api/ai/check-in-analysis`.
+   - Điều chỉnh endpoint nhận `eventId` và khoảng thời gian; backend truy vấn lịch sử quét trong database, tổng hợp số liệu rồi gửi AI. Không yêu cầu người gọi tự nhập các tổng số liệu.
+   - TV3 sở hữu kết nối provider AI dùng chung trong `ai.service.ts`; TV4 chỉ sửa prompt và method check-in, không sửa cấu hình provider/key/request chung.
+   - Frontend chỉ gửi `eventId`, `from`, `to` theo ISO 8601; backend truy vấn log theo vé có `deviceId` trong đúng khoảng thời gian này, tự chạy cả ba rule nội bộ và trả kết quả/căn cứ. Frontend không gửi ngưỡng hoặc lựa chọn rule.
+   - Các ngưỡng nội bộ: (1) confidence >= 0.85, `ACCEPTED` rồi >=3 `ALREADY_USED` trong 5 phút trên >=2 thiết bị; (2) confidence >= 0.90, >=5 lượt lặp sau `ACCEPTED`, kéo dài >=10 phút, từ >=2 thiết bị; (3) confidence >= 0.90, hai cụm lặp (mỗi cụm >=2 lượt trong 5 phút, cách nhau >=30 phút), tổng >=2 thiết bị và một cụm có >=2 thiết bị. Seed tạo ba trường hợp dương tính và ba mẫu đối chứng với thời điểm động, đồng thời in khoảng `from`/`to` để gọi API. `deviceId` client gửi chưa tự xác thực thiết bị thật. Trả `false` khi LLM trả `not_suspected` với confidence >= 0.85 và vé không có lượt lặp/mã sai; các trường hợp khác là chưa kết luận.
+   - `isFraud: true` chỉ là cờ **mẫu hành vi đáng nghi theo quy ước demo**, luôn cần người tổ chức rà soát; không chứng minh ý định gian lận và không tự chặn người tham dự.
+
+6. **Audit log** — `apps/api/src/audit-log/`
+   - Ghi thao tác phát hành vé và kết quả check-in cần truy vết.
+   - `GET /api/audit-logs` lọc theo event/time với phân trang; không ghi API key hoặc nguyên mã QR. Endpoint hiện chưa có auth guard, chỉ dùng local/dev.
+
+7. **Triển khai, chất lượng và giám sát kỹ thuật**
+   - Hoàn thiện `docs/06-deployment/deployment-plan.md`: cách chạy MySQL bằng `infra/docker-compose.yml`, một lệnh `npm run dev` cho web+API, migration/seed tự động, health check API và chạy demo.
+   - Hoàn thiện `docs/04-project-management/quality-plan.md`, `communication-plan.md`, `evm-status.md`, `change-log.md`.
+   - Ghi work log và monitoring log phần Backend 2 tại `docs/05-execution-and-monitoring/work-log.md` và `monitoring-log.md`.
+
+8. **Kiểm thử phần Backend 2**
+   - Viết unit/integration test trong `apps/api/test/` cho đăng ký trùng, hết sức chứa, QR không hợp lệ, check-in hợp lệ/lặp, lọc audit log và ba rule AI.
+   - Cập nhật `tests/test-cases/registration.md`, `qr-ticket.md`, `check-in.md`, `check-in-ai.md`; lưu kết quả/minh chứng thật tại `tests/test-evidence/` sau khi chạy.
+
+**Tiêu chí nghiệm thu phần TV4**
+
+- Migration chạy trên MySQL mới; seed dựng được dữ liệu demo.
+- Luồng đăng ký → phát hành QR → check-in chạy được; vé không check-in thành công lần thứ hai.
+- Lịch sử quét được lưu và tổng hợp theo sự kiện/khoảng thời gian.
+- AI check-in lấy số liệu và lịch sử quét theo vé từ database; backend trả phân loại theo chính sách demo kèm căn cứ, cần người tổ chức rà soát và không tự chặn vé.
+- Có kết quả test, hướng dẫn chạy và minh chứng cho các luồng TV4 sở hữu.
+
+**Phần báo cáo TV4 tự viết**
+
+- `reports/section-VI-execution.md`: database/migration, đăng ký, vé QR, check-in, AI check-in và triển khai.
+- `reports/section-VII-monitoring-control.md`: nhật ký kỹ thuật, EVM, chất lượng, truyền thông kỹ thuật và kiểm soát thay đổi.
+- `reports/section-IX-deliverables.md`: schema/migration, API đăng ký-vé-check-in, dữ liệu mẫu, kết quả test và hướng dẫn chạy thử.
+- `reports/section-X-results.md`: kết quả thực tế, kết quả test, lỗi còn tồn, giới hạn AI và hướng phát triển Backend 2.
 
 ### Thành viên 5 – Frontend / Tester / Demo
 
@@ -365,4 +435,4 @@ TV1 thực hiện ghép định dạng các tiểu mục thành báo cáo cuối
 - Nhiều module nghiệp vụ hiện mới có `README.md`; người được giao module cần triển khai nghiệp vụ, DTO, API và kiểm thử tương ứng.
 - AI cần API key hợp lệ mới gọi được; thiếu key API trả lỗi cấu hình.
 - AI endpoints chưa có auth guard, quota hoặc rate limit. Chỉ chạy local/dev cho đến khi bổ sung các kiểm soát này.
-- Đầu ra AI phải được người phụ trách duyệt. Không xem dự toán là báo giá, không dùng phân tích check-in để tự động kết luận gian lận.
+- Đầu ra AI phải được người phụ trách duyệt. Không xem dự toán là báo giá; phân loại gian lận check-in là kết quả theo chính sách demo, không phải xác minh ý định ngoài đời và không tự động từ chối check-in.
