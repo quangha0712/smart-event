@@ -1,11 +1,14 @@
 import { FeedbackInsightsPanel } from "@/features/ai/FeedbackInsightsPanel";
+import { RequireAuth } from "@/features/auth/RequireAuth";
 
 export default function EventAiInsightsPage({ params }: { params: { id: string } }) {
   return (
-    <main className="page">
-      <span className="eyebrow">EVENT INSIGHTS</span>
-      <h1>Phân tích phản hồi</h1>
-      <FeedbackInsightsPanel eventId={params.id} />
-    </main>
+    <RequireAuth roles={["ORGANIZER"]}>
+      <section className="page-section">
+        <span className="eyebrow">EVENT INSIGHTS</span>
+        <h1 className="page-title">Phân tích phản hồi</h1>
+        <FeedbackInsightsPanel eventId={params.id} />
+      </section>
+    </RequireAuth>
   );
 }
