@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { api, ApiError } from "@/lib/api";
 
 type InsightsResponse = {
   result: Record<string, unknown>;
@@ -18,15 +19,10 @@ export function FeedbackInsightsPanel({ eventId }: { eventId: string }) {
     setError("");
     setData(null);
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
-      const response = await fetch(`${apiBase}/ai/events/${encodeURIComponent(eventId)}/feedback-insights`, {
-        method: "POST",
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.message ?? "Không thể tạo phân tích AI.");
-      setData(payload as InsightsResponse);
+      // api tự gắn token; endpoint AI chỉ dành cho ORGANIZER/ADMIN.
+      setData(await api.post<InsightsResponse>(`/ai/events/${encodeURIComponent(eventId)}/feedback-insights`));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Đã xảy ra lỗi khi gọi AI.");
+      setError(cause instanceof ApiError ? cause.message : "Đã xảy ra lỗi khi gọi AI.");
     } finally {
       setLoading(false);
     }

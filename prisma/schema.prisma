@@ -7,6 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
 enum UserRole {
   ADMIN
   ORGANIZER
@@ -26,55 +30,128 @@ enum RegistrationStatus {
   CANCELLED
 }
 
-enum CheckInAttemptStatus {
-  ACCEPTED
-  ALREADY_USED
-  INVALID
+/// Kênh nhận diện vé khi check-in.
+enum CheckInMethod {
+  QR
+  NFC
+  MANUAL
 }
 
+/// Kết quả của một lượt quét. Chỉ ACCEPTED mới ghi nhận Ticket.checkedInAt.
+enum CheckInResult {
+  ACCEPTED
+  DUPLICATE // vé đã check-in trước đó (quét lặp)
+  INVALID_CODE // không tìm thấy vé ứng với mã quét
+  WRONG_EVENT // vé thuộc sự kiện khác
+  NOT_ELIGIBLE // đăng ký bị huỷ hoặc chưa xác nhận
+}
+
+enum DeviceType {
+  QR_SCANNER
+  NFC_READER
+  SENSOR
+  GATEWAY
+}
+
+enum SensorType {
+  TEMPERATURE
+  HUMIDITY
+  CO2
+  NOISE
+  PEOPLE_COUNT
+  OTHER
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  CONFIRMED
+  DECLINED
+  COMPLETED
+}
+
+/// Nguồn tạo dòng dự toán. AI chỉ gợi ý, người phụ trách phải duyệt.
+enum BudgetItemSource {
+  MANUAL
+  AI_SUGGESTED
+}
+
+// ---------------------------------------------------------------------------
+// Người dùng & sự kiện
+// ---------------------------------------------------------------------------
+
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique @db.VarChar(191)
-  fullName      String         @db.VarChar(191)
-  passwordHash  String         @db.VarChar(255)
-  role          UserRole       @default(ATTENDEE)
-  registrations Registration[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  feedback      EventFeedback[]
+  id                  String           @id @default(cuid())
+  email               String           @unique @db.VarChar(191)
+  fullName            String           @db.VarChar(191)
+  passwordHash        String           @db.VarChar(255)
+  role                UserRole         @default(ATTENDEE)
+  registrations       Registration[]
+  feedback            EventFeedback[]
+  staffProfile        StaffMember?
+  operatedCheckIns    CheckInAttempt[]
+  recordedExpenses    Expense[]
+  approvedBudgetItems BudgetItem[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 }
 
 model Event {
-  id             String         @id @default(cuid())
-  name           String         @db.VarChar(191)
-  description    String?        @db.Text
-  location       String?        @db.VarChar(255)
-  startsAt       DateTime
-  endsAt         DateTime
-  capacity       Int?
-  registeredCount Int           @default(0)
-  status         EventStatus    @default(DRAFT)
-  schedules      ScheduleItem[]
-  registrations  Registration[]
-  feedback       EventFeedback[]
-  budgetItems    BudgetItem[]
-  checkInAttempts CheckInAttempt[]
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id               String            @id @default(cuid())
+  name             String            @db.VarChar(191)
+  description      String?           @db.Text
+  location         String?           @db.VarChar(255)
+  startsAt         DateTime
+  endsAt           DateTime
+  capacity         Int?
+  status           EventStatus       @default(DRAFT)
+  schedules        ScheduleItem[]
+  registrations    Registration[]
+  feedback         EventFeedback[]
+  budgetItems      BudgetItem[]
+  expenses         Expense[]
+  sponsors         Sponsor[]
+  staffAssignments StaffAssignment[]
+  checkInAttempts  CheckInAttempt[]
+  devices          Device[]
+  sensorReadings   SensorReading[]
+  speakers         Speaker[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([status, startsAt])
 }
 
 model ScheduleItem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   eventId     String
-  title       String   @db.VarChar(191)
-  description String?  @db.Text
+  title       String    @db.VarChar(191)
+  description String?   @db.Text
   startsAt    DateTime
   endsAt      DateTime
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// Phòng / sân khấu diễn ra phiên.
+  room        String?   @db.VarChar(100)
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  speakers    Speaker[]
 
   @@index([eventId, startsAt])
+}
+
+/// Diễn giả của sự kiện; một diễn giả có thể tham gia nhiều phiên và ngược lại.
+model Speaker {
+  id           String         @id @default(cuid())
+  eventId      String
+  fullName     String         @db.VarChar(191)
+  title        String?        @db.VarChar(191)
+  organization String?        @db.VarChar(191)
+  bio          String?        @db.Text
+  email        String?        @db.VarChar(191)
+  avatarUrl    String?        @db.VarChar(500)
+  event        Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sessions     ScheduleItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([eventId])
 }
 
 model Registration {
@@ -92,28 +169,15 @@ model Registration {
 }
 
 model Ticket {
-  id             String       @id @default(cuid())
-  registrationId String       @unique
-  qrCode         String       @unique @db.VarChar(191)
-  checkedInAt    DateTime?
-  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  id              String           @id @default(cuid())
+  registrationId  String           @unique
+  qrCode          String           @unique @db.VarChar(191)
+  /// UID thẻ NFC gắn với vé (nếu có).
+  nfcUid          String?          @unique @db.VarChar(64)
+  checkedInAt     DateTime?
+  registration    Registration     @relation(fields: [registrationId], references: [id], onDelete: Cascade)
   checkInAttempts CheckInAttempt[]
-  createdAt      DateTime     @default(now())
-}
-
-model CheckInAttempt {
-  id        String                @id @default(cuid())
-  eventId   String
-  ticketId  String?
-  deviceId  String                @db.VarChar(191)
-  status    CheckInAttemptStatus
-  scannedAt DateTime              @default(now())
-  event     Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  ticket    Ticket?               @relation(fields: [ticketId], references: [id], onDelete: SetNull)
-
-  @@index([eventId, scannedAt])
-  @@index([eventId, status, scannedAt])
-  @@index([ticketId, scannedAt])
+  createdAt       DateTime         @default(now())
 }
 
 model EventFeedback {
@@ -129,17 +193,223 @@ model EventFeedback {
   @@unique([eventId, userId])
 }
 
-model BudgetItem {
+// ---------------------------------------------------------------------------
+// Check-in & IoT
+// ---------------------------------------------------------------------------
+
+/// Thiết bị tại sự kiện: máy quét QR, đầu đọc NFC, cảm biến, gateway (thật hoặc giả lập).
+model Device {
+  id              String           @id @default(cuid())
+  eventId         String?
+  code            String           @unique @db.VarChar(100)
+  name            String           @db.VarChar(191)
+  type            DeviceType
+  location        String?          @db.VarChar(191)
+  isSimulated     Boolean          @default(false)
+  isActive        Boolean          @default(true)
+  lastSeenAt      DateTime?
+  event           Event?           @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  checkInAttempts CheckInAttempt[]
+  sensorReadings  SensorReading[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([eventId, type])
+}
+
+/// Mọi lượt quét, kể cả lượt bị từ chối. Là nguồn dữ liệu cho thống kê và AI check-in-analysis.
+model CheckInAttempt {
+  id          String        @id @default(cuid())
+  eventId     String
+  ticketId    String?
+  deviceId    String?
+  operatorId  String?
+  /// Mã thô đọc được (nội dung QR hoặc UID NFC).
+  scannedCode String        @db.VarChar(191)
+  method      CheckInMethod @default(QR)
+  result      CheckInResult
+  note        String?       @db.VarChar(255)
+  event       Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticket      Ticket?       @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  device      Device?       @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  operator    User?         @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+
+  @@index([eventId, createdAt])
+  @@index([eventId, result])
+  @@index([ticketId])
+  @@index([deviceId])
+  @@index([operatorId])
+}
+
+model SensorReading {
+  id         String     @id @default(cuid())
+  eventId    String
+  deviceId   String
+  sensorType SensorType
+  /// Khu vực đo, ví dụ: "Cổng A", "Hội trường". Mặc định lấy theo vị trí thiết bị.
+  zone       String?    @db.VarChar(100)
+  /// Giá trị đo; với PEOPLE_COUNT là số người trong khu vực.
+  value      Decimal    @db.Decimal(12, 3)
+  unit       String     @db.VarChar(20)
+  recordedAt DateTime
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  device     Device     @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  createdAt  DateTime   @default(now())
+
+  @@index([eventId, sensorType, recordedAt])
+  @@index([eventId, zone, recordedAt])
+  @@index([deviceId, recordedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Nhân sự
+// ---------------------------------------------------------------------------
+
+model StaffMember {
+  id          String            @id @default(cuid())
+  /// Liên kết tài khoản đăng nhập (tuỳ chọn; tình nguyện viên có thể không có tài khoản).
+  userId      String?           @unique
+  fullName    String            @db.VarChar(191)
+  email       String?           @db.VarChar(191)
+  phone       String?           @db.VarChar(30)
+  position    String?           @db.VarChar(100)
+  skills      String?           @db.Text
+  note        String?           @db.Text
+  isActive    Boolean           @default(true)
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assignments StaffAssignment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([fullName])
+}
+
+model StaffAssignment {
+  id        String           @id @default(cuid())
+  eventId   String
+  staffId   String
+  /// Vai trò trong sự kiện, ví dụ: "Check-in cổng A", "Hậu cần".
+  role      String           @db.VarChar(100)
+  task      String?          @db.Text
+  startsAt  DateTime?
+  endsAt    DateTime?
+  status    AssignmentStatus @default(ASSIGNED)
+  event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  staff     StaffMember      @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([eventId, staffId, role])
+  @@index([staffId])
+}
+
+// ---------------------------------------------------------------------------
+// Nguồn lực: nhân sự, nhà cung cấp, tài trợ, ngân sách
+// ---------------------------------------------------------------------------
+
+model Vendor {
+  id          String       @id @default(cuid())
+  name        String       @db.VarChar(191)
+  serviceType String       @db.VarChar(100)
+  contactName String?      @db.VarChar(191)
+  email       String?      @db.VarChar(191)
+  phone       String?      @db.VarChar(30)
+  address     String?      @db.VarChar(255)
+  taxCode     String?      @unique @db.VarChar(30)
+  note        String?      @db.Text
+  budgetItems BudgetItem[]
+  expenses    Expense[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([serviceType])
+}
+
+/// Nhà tài trợ của một sự kiện (gộp thông tin liên hệ và khoản tài trợ).
+model Sponsor {
   id          String   @id @default(cuid())
   eventId     String
   name        String   @db.VarChar(191)
-  category    String   @db.VarChar(100)
-  amount      Decimal  @db.Decimal(12, 2)
-  isIncome    Boolean  @default(false)
+  contactName String?  @db.VarChar(191)
+  email       String?  @db.VarChar(191)
+  phone       String?  @db.VarChar(30)
+  website     String?  @db.VarChar(255)
+  logoUrl     String?  @db.VarChar(500)
+  /// Hạng tài trợ, ví dụ: Kim cương, Vàng, Bạc.
+  tier        String?  @db.VarChar(50)
+  /// Giá trị tài trợ (tiền mặt hoặc hiện vật quy đổi).
+  amount      Decimal  @default(0) @db.Decimal(15, 2)
   note        String?  @db.Text
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([name])
 }
+
+// ---------------------------------------------------------------------------
+// Dự toán - thực chi
+// ---------------------------------------------------------------------------
+
+/// Dòng dự toán. plannedAmount = quantity x unitPrice (tính ở tầng service).
+model BudgetItem {
+  id            String           @id @default(cuid())
+  eventId       String
+  vendorId      String?
+  name          String           @db.VarChar(191)
+  category      String           @db.VarChar(100)
+  quantity      Decimal          @default(1) @db.Decimal(12, 2)
+  unit          String?          @db.VarChar(30)
+  unitPrice     Decimal          @default(0) @db.Decimal(15, 2)
+  plannedAmount Decimal          @db.Decimal(15, 2)
+  isIncome      Boolean          @default(false)
+  source        BudgetItemSource @default(MANUAL)
+  approvedById  String?
+  approvedAt    DateTime?
+  note          String?          @db.Text
+  event         Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vendor        Vendor?          @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  approvedBy    User?            @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+  expenses      Expense[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([eventId, category])
+  @@index([vendorId])
+  @@index([approvedById])
+}
+
+/// Khoản thực chi. budgetItemId null = chi phát sinh ngoài dự toán.
+model Expense {
+  id            String      @id @default(cuid())
+  eventId       String
+  budgetItemId  String?
+  vendorId      String?
+  recordedById  String?
+  description   String      @db.VarChar(255)
+  amount        Decimal     @db.Decimal(15, 2)
+  paidAt        DateTime
+  invoiceNumber String?     @db.VarChar(100)
+  attachmentUrl String?     @db.VarChar(500)
+  note          String?     @db.Text
+  event         Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  budgetItem    BudgetItem? @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+  vendor        Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  recordedBy    User?       @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([eventId, paidAt])
+  @@index([budgetItemId])
+  @@index([vendorId])
+  @@index([recordedById])
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
 
 model AuditLog {
   id         String   @id @default(cuid())

@@ -76,22 +76,21 @@ smart-event/
 │  │  │  │  └─ README.md
 │  │  │  ├─ event-feedback/
 │  │  │  │  └─ README.md
-│  │  │  ├─ staff/
-│  │  │  │  └─ README.md
-│  │  │  ├─ vendors/
-│  │  │  │  └─ README.md
-│  │  │  ├─ sponsors/
-│  │  │  │  └─ README.md
-│  │  │  ├─ funding/
-│  │  │  │  └─ README.md
-│  │  │  ├─ budget/
-│  │  │  │  └─ README.md
+│  │  │  ├─ resources/          # nguồn lực: nhân sự, NCC, tài trợ, dự toán – thực chi
+│  │  │  │  ├─ README.md
+│  │  │  │  ├─ resources.module.ts
+│  │  │  │  ├─ staff.controller.ts
+│  │  │  │  ├─ partners.controller.ts
+│  │  │  │  ├─ budget.controller.ts
+│  │  │  │  ├─ budget.service.ts
+│  │  │  │  └─ dto/
 │  │  │  ├─ reports/
 │  │  │  │  └─ README.md
 │  │  │  ├─ audit-log/
 │  │  │  │  ├─ audit-log.controller.ts
 │  │  │  │  ├─ audit-log.module.ts
 │  │  │  │  ├─ audit-log.service.ts
+│  │  │  ├─ audit-log/          # để sau
 │  │  │  │  └─ README.md
 │  │  │  ├─ prisma/
 │  │  │  │  └─ prisma.module.ts
@@ -145,7 +144,6 @@ smart-event/
 │        │  ├─ check-in/README.md
 │        │  ├─ event-feedback/README.md
 │        │  ├─ resources/README.md
-│        │  ├─ budget/README.md
 │        │  └─ dashboard/README.md
 │        ├─ lib/README.md
 │        └─ types/README.md
@@ -302,7 +300,7 @@ smart-event/
 
 **Phải hoàn thành trong codebase**
 
-1. Hoàn thiện module `apps/api/src/auth/`, `users/`, `events/`, `schedules/`, `staff/`, `vendors/`, `sponsors/`, `funding/`, `budget/`.
+1. Hoàn thiện module `apps/api/src/auth/`, `users/`, `events/`, `schedules/` và module nguồn lực `resources/` (nhân sự, nhà cung cấp, nhà tài trợ, dự toán – thực chi).
 2. Hoàn thiện AI dự toán: prompt `budget-estimate.prompt.ts`, method `budgetEstimate` controller/service và kiểm tra đầu ra số học.
 3. Sở hữu kết nối kỹ thuật provider chung trong `ai.service.ts`: cấu hình base URL/key/model, gửi request, timeout, lỗi provider và parse JSON. Những thành viên khác không sửa phần provider chung.
 4. Cập nhật schema/module API liên quan đến nghiệp vụ Backend 1 và tài liệu API tương ứng.
@@ -319,6 +317,11 @@ smart-event/
 **Phạm vi sở hữu**
 
 TV4 sở hữu database và luồng đăng ký → vé QR → check-in, cùng giám sát kỹ thuật/triển khai Backend 2. Các module `staff/`, `vendors/`, `sponsors/`, `funding/`, `budget/` thuộc TV3 theo phân công codebase; TV4 không triển khai lại các module đó.
+1. Hoàn thiện `prisma/schema.prisma`, migrations, seed và `apps/api/src/prisma/`.
+2. Hoàn thiện `apps/api/src/registrations/`, `tickets/`, `check-in/`, `integrations/nfc/`, `integrations/iot/`. Module `audit-log/` để sau (ngoài phạm vi đợt hiện tại).
+3. Hoàn thiện cấu hình triển khai trong `infra/` và `docs/06-deployment/deployment-plan.md`.
+4. Hoàn thiện `quality-plan.md`, `evm-status.md`, `change-log.md`.
+5. Hoàn thiện AI phân tích check-in: prompt `checkin-analysis.prompt.ts`, method `checkInAnalysis` controller/service; chỉ tạo cảnh báo tham khảo, không tự chặn vé/người.
 
 **Việc bắt buộc phải hoàn thành trong codebase**
 

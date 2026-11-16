@@ -113,6 +113,9 @@ export class AiService {
           if (attempt.status === "ALREADY_USED") {
             return `Vé ${pattern.ticketRef} được quét lại lúc ${time} tại máy ${device}; hệ thống báo ALREADY_USED (vé đã được sử dụng).`;
           }
+          if (attempt.status === "NOT_ELIGIBLE") {
+            return `Vé ${pattern.ticketRef} được quét lúc ${time} tại máy ${device}; hệ thống từ chối vì đăng ký chưa hợp lệ hoặc đã bị hủy.`;
+          }
           return `Vé ${pattern.ticketRef} được quét lúc ${time} tại máy ${device}; hệ thống báo INVALID (mã vé không hợp lệ).`;
         });
         const repeatsAfterAccepted = attempts.filter((attempt) =>
@@ -186,7 +189,7 @@ export class AiService {
           confidence >= 0.85 &&
           !hasNearSimultaneousAcceptedOnDifferentDevices &&
           repeatsAfterAccepted.length === 0 &&
-          !attempts.some((attempt) => attempt.status === "INVALID")
+          !attempts.some((attempt) => attempt.status === "INVALID" || attempt.status === "NOT_ELIGIBLE")
         ) {
           isFraud = false;
           decision = "NO_FRAUD_SIGNAL";
@@ -203,6 +206,7 @@ export class AiService {
               accepted: acceptedAttempts.length,
               alreadyUsed: allRepeatedAttempts.length,
               invalid: invalidAttempts.length,
+              notEligible: attempts.filter((attempt) => attempt.status === "NOT_ELIGIBLE").length,
             },
             acceptedAttempts: acceptedAttempts.map(mapScanAttempt),
             repeatedAttempts: allRepeatedAttempts.map(mapScanAttempt),

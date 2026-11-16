@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.module";
 import { AuditLogService } from "../audit-log/audit-log.service";
+import { signTicketCode } from "../tickets/ticket-code";
 
 @Injectable()
 export class RegistrationsService {
@@ -29,15 +30,10 @@ export class RegistrationsService {
           throw new ConflictException("Người dùng đã đăng ký sự kiện này.");
         }
 
-        const reserved = await tx.event.updateMany({
-          where: {
-            id: eventId,
-            status: "PUBLISHED",
-            ...(event.capacity === null ? {} : { registeredCount: { lt: event.capacity } }),
-          },
-          data: { registeredCount: { increment: 1 } },
-        });
-        if (reserved.count !== 1) throw new ConflictException("Sự kiện đã đủ sức chứa hoặc đã đóng đăng ký.");
+        const confirmedCount = await tx.registration.count({ where: { eventId, status: "CONFIRMED" } });
+        if (event.capacity !== null && confirmedCount >= event.capacity) {
+          throw new ConflictException("Sự kiện đã đủ sức chứa.");
+        }
 
         const registration = existing
           ? await tx.registration.update({
@@ -48,11 +44,16 @@ export class RegistrationsService {
               data: { userId, eventId, status: "CONFIRMED" },
             });
 
-        const qrCode = randomBytes(32).toString("base64url");
+        const existingTicket = await tx.ticket.findUnique({
+          where: { registrationId: registration.id },
+          select: { id: true },
+        });
+        const ticketId = existingTicket?.id ?? randomBytes(18).toString("hex");
+        const qrCode = signTicketCode(ticketId);
         const ticket = await tx.ticket.upsert({
           where: { registrationId: registration.id },
           update: { qrCode, checkedInAt: null, createdAt: new Date() },
-          create: { registrationId: registration.id, qrCode },
+          create: { id: ticketId, registrationId: registration.id, qrCode },
         });
 
         await this.auditLog.record(tx, {
@@ -116,10 +117,6 @@ export class RegistrationsService {
         data: { status: "CANCELLED" },
       });
       if (updated.count !== 1) throw new ConflictException("Đăng ký đã thay đổi; hãy tải lại trước khi hủy.");
-      await tx.event.updateMany({
-        where: { id: eventId, registeredCount: { gt: 0 } },
-        data: { registeredCount: { decrement: 1 } },
-      });
       await this.auditLog.record(tx, {
         action: "REGISTRATION_CANCELLED",
         entityType: "Registration",

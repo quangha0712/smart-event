@@ -4,3 +4,6 @@
 
 - `GET /api/audit-logs?eventId=...&from=...&to=...&page=1&pageSize=50` lọc theo sự kiện và thời gian, sắp xếp mới nhất trước và phân trang. Nếu bỏ `from`/`to`, mặc định là 24 giờ gần nhất; tối đa 30 ngày, tối đa 200 bản ghi/trang.
 - `eventId` là bắt buộc. Endpoint hiện chưa có auth guard nên chỉ dùng local/dev cho đến khi phân quyền organizer được triển khai.
+> **Để sau** – ngoài phạm vi đợt hiện tại. Bảng `AuditLog` đã có sẵn trong schema nhưng chưa có module ghi/đọc.
+
+Lưu nhật ký thao tác phục vụ theo dõi và kiểm soát thay đổi dữ liệu.

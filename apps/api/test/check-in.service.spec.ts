@@ -1,62 +1,84 @@
-import { CheckInAttemptStatus } from "@prisma/client";
+import { CheckInMethod, CheckInResult, RegistrationStatus } from "@prisma/client";
 import { PrismaService } from "../src/prisma/prisma.module";
-import { AuditLogService } from "../src/audit-log/audit-log.service";
 import { CheckInService } from "../src/check-in/check-in.service";
+import { signTicketCode } from "../src/tickets/ticket-code";
 
 describe("CheckInService", () => {
-  const event = { id: "event-1" };
-  const makeService = (ticket: Record<string, any> | null) => {
-    const tx = {
-      ticket: {
-        findUnique: jest.fn().mockResolvedValue(ticket),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-      },
-      checkInAttempt: { create: jest.fn().mockImplementation(({ data }) => ({ id: "attempt-1", ...data, scannedAt: new Date() })) },
+  const previousSecret = process.env.TICKET_QR_SECRET;
+  let qrCode: string;
+
+  beforeAll(() => {
+    process.env.TICKET_QR_SECRET = "test-only-secret-that-is-long-enough-for-hmac-signing";
+    qrCode = signTicketCode("ticket-1");
+  });
+
+  afterAll(() => {
+    if (previousSecret === undefined) delete process.env.TICKET_QR_SECRET;
+    else process.env.TICKET_QR_SECRET = previousSecret;
+  });
+
+  const makeService = (options: { ticket: Record<string, any> | null; updateCount?: number }) => {
+    const ticket = {
+      findFirst: jest.fn().mockResolvedValue(options.ticket),
+      updateMany: jest.fn().mockResolvedValue({ count: options.updateCount ?? 1 }),
+      findUnique: jest.fn().mockResolvedValue(options.ticket),
     };
     const prisma = {
-      event: { findUnique: jest.fn().mockResolvedValue(event) },
-      $transaction: jest.fn((callback: (transaction: unknown) => unknown) => callback(tx)),
+      event: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: "event-1" }) },
+      device: { findUnique: jest.fn().mockResolvedValue({ id: "device-north" }) },
+      ticket,
+      checkInAttempt: { create: jest.fn().mockImplementation(({ data }) => ({ id: "attempt-1", ...data })) },
     };
-    const auditLog = { record: jest.fn() };
-    return { service: new CheckInService(prisma as unknown as PrismaService, auditLog as unknown as AuditLogService), tx };
+    return {
+      service: new CheckInService(prisma as unknown as PrismaService),
+      prisma,
+    };
   };
 
-  it("accepts a valid ticket once and records the scanner device", async () => {
-    const { service, tx } = makeService({
-      id: "ticket-1",
-      checkedInAt: null,
-      registration: { eventId: "event-1", status: "CONFIRMED" },
+  it("accepts a valid signed ticket once and records the scanner device", async () => {
+    const { service, prisma } = makeService({
+      ticket: {
+        id: "ticket-1",
+        checkedInAt: null,
+        registration: { eventId: "event-1", status: RegistrationStatus.CONFIRMED, user: { fullName: "Attendee" } },
+      },
     });
 
-    const result = await service.process("event-1", "qr-1", "scanner-north");
+    const result = await service.checkIn({ eventId: "event-1", code: qrCode, method: CheckInMethod.QR, deviceCode: "scanner-north" }, "operator-1");
 
-    expect(result.result).toBe(CheckInAttemptStatus.ACCEPTED);
-    expect(tx.checkInAttempt.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ ticketId: "ticket-1", deviceId: "scanner-north", status: "ACCEPTED" }),
+    expect(result.result).toBe(CheckInResult.ACCEPTED);
+    expect(prisma.checkInAttempt.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ ticketId: "ticket-1", deviceId: "device-north", result: CheckInResult.ACCEPTED }),
     });
   });
 
-  it("records a repeated scan as ALREADY_USED without checking in again", async () => {
-    const { service, tx } = makeService({
-      id: "ticket-1",
-      checkedInAt: new Date("2026-11-15T08:00:00.000Z"),
-      registration: { eventId: "event-1", status: "CONFIRMED" },
+  it("records a repeated scan as DUPLICATE and does not mark the ticket accepted again", async () => {
+    const { service, prisma } = makeService({
+      ticket: {
+        id: "ticket-1",
+        checkedInAt: new Date("2026-11-15T08:00:00.000Z"),
+        registration: { eventId: "event-1", status: RegistrationStatus.CONFIRMED, user: { fullName: "Attendee" } },
+      },
+      updateCount: 0,
     });
 
-    const result = await service.process("event-1", "qr-1", "scanner-east");
+    const result = await service.checkIn({ eventId: "event-1", code: qrCode, method: CheckInMethod.QR }, "operator-1");
 
-    expect(result.result).toBe(CheckInAttemptStatus.ALREADY_USED);
-    expect(tx.ticket.updateMany).not.toHaveBeenCalled();
+    expect(result.result).toBe(CheckInResult.DUPLICATE);
+    expect(prisma.ticket.updateMany).toHaveBeenCalled();
+    expect(prisma.checkInAttempt.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ result: CheckInResult.DUPLICATE }),
+    });
   });
 
-  it("records unknown QR payloads as INVALID", async () => {
-    const { service, tx } = makeService(null);
+  it("records an invalid signed QR payload as INVALID_CODE", async () => {
+    const { service, prisma } = makeService({ ticket: null });
 
-    const result = await service.process("event-1", "missing-qr", "scanner-east");
+    const result = await service.checkIn({ eventId: "event-1", code: "not-a-signed-qr", deviceCode: "scanner-north" }, "operator-1");
 
-    expect(result.result).toBe(CheckInAttemptStatus.INVALID);
-    expect(tx.checkInAttempt.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ ticketId: null, deviceId: "scanner-east", status: "INVALID" }),
+    expect(result.result).toBe(CheckInResult.INVALID_CODE);
+    expect(prisma.checkInAttempt.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ ticketId: undefined, deviceId: "device-north", result: CheckInResult.INVALID_CODE }),
     });
   });
 });

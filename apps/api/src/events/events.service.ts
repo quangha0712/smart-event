@@ -1,15 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { EventStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.module";
-
-export type NewEventInput = {
-  name?: string;
-  description?: string;
-  location?: string;
-  startsAt?: string;
-  endsAt?: string;
-  capacity?: number;
-};
+import { CreateEventDto } from "./dto/create-event.dto";
 
 @Injectable()
 export class EventsService {
@@ -25,11 +17,14 @@ export class EventsService {
   getById(id: string) {
     return this.prisma.event.findUnique({
       where: { id },
-      include: { schedules: true, _count: { select: { registrations: true } } },
+      include: {
+        schedules: { orderBy: { startsAt: "asc" }, include: { speakers: true } },
+        speakers: { orderBy: { fullName: "asc" } },
+        _count: { select: { registrations: true } } },
     });
   }
 
-  create(input: NewEventInput) {
+  create(input: CreateEventDto) {
     const startsAt = input.startsAt ? new Date(input.startsAt) : undefined;
     const endsAt = input.endsAt ? new Date(input.endsAt) : undefined;
     if (!input.name?.trim() || !startsAt || !endsAt || isNaN(startsAt.valueOf()) || isNaN(endsAt.valueOf())) {
