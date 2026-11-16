@@ -1,4 +1,4 @@
-import { DeviceType, EventStatus, FundingSourceType, PrismaClient, UserRole } from "@prisma/client";
+import { DeviceType, EventStatus, PrismaClient, UserRole } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -57,15 +57,10 @@ async function main() {
     update: {},
     create: { id: "demo-vendor-av", name: "Công ty Âm thanh Ánh sáng Demo", serviceType: "Âm thanh - ánh sáng" },
   });
-  const sponsor = await prisma.sponsor.upsert({
+  await prisma.sponsor.upsert({
     where: { id: "demo-sponsor" },
     update: {},
-    create: { id: "demo-sponsor", name: "Nhà tài trợ Demo" },
-  });
-  await prisma.funding.upsert({
-    where: { id: "demo-funding-gold" },
-    update: {},
-    create: { id: "demo-funding-gold", eventId, sponsorId: sponsor.id, sourceType: FundingSourceType.SPONSOR, tier: "Vàng", amount: 20_000_000 },
+    create: { id: "demo-sponsor", eventId, name: "Nhà tài trợ Demo", tier: "Vàng", amount: 20_000_000 },
   });
 
   const budgetItem = await prisma.budgetItem.upsert({

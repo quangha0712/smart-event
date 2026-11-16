@@ -11,6 +11,11 @@ Base URL cục bộ: `http://localhost:3001/api`.
 | GET | `/tickets/:code` | Tra cứu vé |
 | POST | `/check-in` | Check-in vé |
 | POST | `/events/:id/feedback` | Gửi đánh giá |
+| GET/POST/PATCH/DELETE | `/resources/staff`, `/resources/staff-assignments` | Nhân sự và phân công theo sự kiện |
+| GET/POST/PATCH/DELETE | `/resources/vendors` | Nhà cung cấp |
+| GET/POST/PATCH/DELETE | `/resources/sponsors` | Nhà tài trợ (gắn sự kiện, có hạng và giá trị tài trợ) |
+| GET/POST/PATCH/DELETE | `/resources/budget-items`, `/resources/expenses` | Dự toán và thực chi |
+| GET | `/resources/budget-summary/:eventId` | So sánh dự toán – thực chi |
 | POST | `/ai/project-summary` | Tóm tắt tiến độ/rủi ro từ dữ liệu PM cung cấp |
 | POST | `/ai/requirements-draft` | Tạo bản nháp yêu cầu/use case cho BA rà soát |
 | POST | `/ai/budget-estimate` | Gợi ý dự toán sơ bộ sự kiện |

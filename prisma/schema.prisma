@@ -69,24 +69,6 @@ enum AssignmentStatus {
   COMPLETED
 }
 
-enum FundingSourceType {
-  SPONSOR
-  ORGANIZATION
-  TICKET_SALES
-  OTHER
-}
-
-enum FundingKind {
-  CASH
-  IN_KIND
-}
-
-enum FundingStatus {
-  PLEDGED
-  RECEIVED
-  CANCELLED
-}
-
 /// Nguồn tạo dòng dự toán. AI chỉ gợi ý, người phụ trách phải duyệt.
 enum BudgetItemSource {
   MANUAL
@@ -127,7 +109,7 @@ model Event {
   feedback         EventFeedback[]
   budgetItems      BudgetItem[]
   expenses         Expense[]
-  fundings         Funding[]
+  sponsors         Sponsor[]
   staffAssignments StaffAssignment[]
   checkInAttempts  CheckInAttempt[]
   devices          Device[]
@@ -297,7 +279,7 @@ model StaffAssignment {
 }
 
 // ---------------------------------------------------------------------------
-// Nhà cung cấp & tài trợ
+// Nguồn lực: nhân sự, nhà cung cấp, tài trợ, ngân sách
 // ---------------------------------------------------------------------------
 
 model Vendor {
@@ -318,42 +300,27 @@ model Vendor {
   @@index([serviceType])
 }
 
+/// Nhà tài trợ của một sự kiện (gộp thông tin liên hệ và khoản tài trợ).
 model Sponsor {
-  id          String    @id @default(cuid())
-  name        String    @db.VarChar(191)
-  contactName String?   @db.VarChar(191)
-  email       String?   @db.VarChar(191)
-  phone       String?   @db.VarChar(30)
-  website     String?   @db.VarChar(255)
-  logoUrl     String?   @db.VarChar(500)
-  note        String?   @db.Text
-  fundings    Funding[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([name])
-}
-
-/// Nguồn kinh phí / khoản tài trợ của sự kiện (tiền mặt hoặc hiện vật quy đổi).
-model Funding {
-  id          String            @id @default(cuid())
+  id          String   @id @default(cuid())
   eventId     String
-  sponsorId   String?
-  sourceType  FundingSourceType
-  kind        FundingKind       @default(CASH)
+  name        String   @db.VarChar(191)
+  contactName String?  @db.VarChar(191)
+  email       String?  @db.VarChar(191)
+  phone       String?  @db.VarChar(30)
+  website     String?  @db.VarChar(255)
+  logoUrl     String?  @db.VarChar(500)
   /// Hạng tài trợ, ví dụ: Kim cương, Vàng, Bạc.
-  tier        String?           @db.VarChar(50)
-  amount      Decimal           @db.Decimal(15, 2)
-  description String?           @db.Text
-  status      FundingStatus     @default(PLEDGED)
-  receivedAt  DateTime?
-  event       Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  sponsor     Sponsor?          @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  tier        String?  @db.VarChar(50)
+  /// Giá trị tài trợ (tiền mặt hoặc hiện vật quy đổi).
+  amount      Decimal  @default(0) @db.Decimal(15, 2)
+  note        String?  @db.Text
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@index([eventId, status])
-  @@index([sponsorId])
+  @@index([eventId])
+  @@index([name])
 }
 
 // ---------------------------------------------------------------------------

@@ -17,22 +17,18 @@ Các entity được khai báo tại `prisma/schema.prisma`; migration nằm tro
   - Chỉ lượt ACCEPTED mới ghi `Ticket.checkedInAt`; số liệu tổng hợp cho `POST /ai/check-in-analysis` lấy từ bảng này
 - Device 1—N SensorReading (loại cảm biến, giá trị, đơn vị, thời điểm đo)
 
-## Nhân sự
+## Nguồn lực (module `resources`)
 
-- StaffMember (có thể liên kết 0..1 User)
-- Event 1—N StaffAssignment N—1 StaffMember (duy nhất theo `eventId + staffId + role`)
-
-## Nhà cung cấp, tài trợ, kinh phí
-
+- StaffMember (có thể liên kết 0..1 User); Event 1—N StaffAssignment N—1 StaffMember (duy nhất theo `eventId + staffId + role`)
 - Vendor 1—N BudgetItem, Vendor 1—N Expense
-- Sponsor 1—N Funding; Event 1—N Funding (`sourceType`: SPONSOR / ORGANIZATION / TICKET_SALES / OTHER; `status`: PLEDGED / RECEIVED / CANCELLED)
+- Event 1—N Sponsor: mỗi nhà tài trợ gắn với một sự kiện, có `tier` (hạng) và `amount` (giá trị tài trợ). Đã bỏ bảng Funding vì trùng với Sponsor.
 
 ## Dự toán – thực chi
 
 - Event 1—N BudgetItem (dự toán): `quantity × unitPrice = plannedAmount`, `source` MANUAL / AI_SUGGESTED, người duyệt `approvedBy`
 - Event 1—N Expense (thực chi); Expense N—0..1 BudgetItem (null = chi phát sinh ngoài dự toán)
-- Chênh lệch = Σ Expense.amount − BudgetItem.plannedAmount, tính ở tầng service/báo cáo
+- Chênh lệch = Σ Expense.amount − BudgetItem.plannedAmount; xem `GET /api/resources/budget-summary/:eventId`
 
 ## Khác
 
-- AuditLog lưu lịch sử thao tác.
+- AuditLog lưu lịch sử thao tác (bảng có sẵn, module để sau).
