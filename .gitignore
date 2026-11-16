@@ -6,7 +6,6 @@ coverage/
 .env.*.local
 *.log
 apps/web/next-env.d.ts
-prisma/migrations/*/migration_lock.toml
 tests/test-evidence/*
 !tests/test-evidence/.gitkeep
 demo/videos/*
