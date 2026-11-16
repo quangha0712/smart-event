@@ -54,6 +54,20 @@ Root của MySQL riêng này không có mật khẩu và chỉ nghe `127.0.0.1`,
 - `tests`: test plan, test case, dữ liệu, bug report, API/E2E test và minh chứng tester.
 - `docs`, `reports`, `slides`, `demo`: tài liệu quản lý dự án và sản phẩm bàn giao.
 
-Tài khoản seed chỉ là dữ liệu minh họa, chưa dùng để đăng nhập; cần triển khai hash mật khẩu và module xác thực trước khi dùng chức năng auth.
+## Đăng nhập và tài khoản demo
+
+API dùng JWT; mọi endpoint cần `Authorization: Bearer <token>` trừ `/health`, `/auth/login`, `/auth/register` và xem sự kiện. `.env` phải có `JWT_SECRET` và `TICKET_QR_SECRET` (chuỗi ngẫu nhiên >= 32 ký tự), nếu thiếu API sẽ dừng khi khởi động. Tạo secret:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+`npm run db:seed` tạo 3 tài khoản (mật khẩu `SEED_DEMO_PASSWORD`, mặc định `SmartEvent@2026`, chỉ dùng cho dev):
+
+| Email | Quyền |
+|---|---|
+| admin@example.com | ADMIN – toàn quyền, đổi quyền người dùng |
+| organizer@example.com | ORGANIZER – quản lý sự kiện, nguồn lực, check-in, AI |
+| attendee@example.com | ATTENDEE – có sẵn một vé QR (mã in ra khi seed) |
 
 Các endpoint AI cần API key của nhà cung cấp tương thích OpenAI và có thể phát sinh chi phí theo mức sử dụng. Kết quả AI chỉ là bản nháp/ước lượng, cần con người rà soát. Không gửi dữ liệu cá nhân nhạy cảm.

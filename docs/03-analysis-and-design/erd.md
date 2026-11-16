@@ -5,8 +5,8 @@ Các entity được khai báo tại `prisma/schema.prisma`; migration nằm tro
 ## Sự kiện & người tham dự
 
 - User 1—N Registration; Event 1—N Registration
-- Event 1—N ScheduleItem
-- Registration 1—0..1 Ticket (Ticket có `qrCode` duy nhất và `nfcUid` tuỳ chọn)
+- Event 1—N ScheduleItem (có `room`); Event 1—N Speaker; ScheduleItem N—N Speaker (bảng nối `_ScheduleItemToSpeaker`)
+- Registration 1—0..1 Ticket (Ticket có `qrCode` ký HMAC, duy nhất, và `nfcUid` tuỳ chọn)
 - Event 1—N EventFeedback
 
 ## Check-in & IoT
@@ -15,7 +15,7 @@ Các entity được khai báo tại `prisma/schema.prisma`; migration nằm tro
 - Event 1—N CheckInAttempt: lưu **mọi** lượt quét với `result` = ACCEPTED / DUPLICATE / INVALID_CODE / WRONG_EVENT / NOT_ELIGIBLE
   - CheckInAttempt N—0..1 Ticket, Device, User (người vận hành)
   - Chỉ lượt ACCEPTED mới ghi `Ticket.checkedInAt`; số liệu tổng hợp cho `POST /ai/check-in-analysis` lấy từ bảng này
-- Device 1—N SensorReading (loại cảm biến, giá trị, đơn vị, thời điểm đo)
+- Device 1—N SensorReading (loại cảm biến, khu vực `zone`, giá trị, đơn vị, thời điểm đo; PEOPLE_COUNT = số người trong khu vực)
 
 ## Nguồn lực (module `resources`)
 

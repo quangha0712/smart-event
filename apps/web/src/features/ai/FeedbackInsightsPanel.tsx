@@ -19,9 +19,20 @@ export function FeedbackInsightsPanel({ eventId }: { eventId: string }) {
     setData(null);
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
+      // Endpoint AI yêu cầu đăng nhập quyền ORGANIZER/ADMIN; token lưu sau khi gọi POST /auth/login.
+      let token: string | null = null;
+      try {
+        token = window.localStorage.getItem("smart-event.accessToken");
+      } catch {
+        token = null;
+      }
       const response = await fetch(`${apiBase}/ai/events/${encodeURIComponent(eventId)}/feedback-insights`, {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
+      if (response.status === 401 || response.status === 403) {
+        throw new Error("Cần đăng nhập bằng tài khoản ban tổ chức để dùng tính năng AI.");
+      }
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.message ?? "Không thể tạo phân tích AI.");
       setData(payload as InsightsResponse);

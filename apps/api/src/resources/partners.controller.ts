@@ -1,7 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { Roles } from "../auth/auth.decorators";
 import { PrismaService } from "../prisma/prisma.module";
 import { CreateSponsorDto, CreateVendorDto, UpdateSponsorDto, UpdateVendorDto } from "./dto/partner.dto";
 
+@Roles(UserRole.ORGANIZER)
 @Controller("resources/vendors")
 export class VendorsController {
   constructor(private readonly prisma: PrismaService) {}
@@ -33,6 +36,7 @@ export class VendorsController {
   }
 }
 
+@Roles(UserRole.ORGANIZER)
 @Controller("resources/sponsors")
 export class SponsorsController {
   constructor(private readonly prisma: PrismaService) {}

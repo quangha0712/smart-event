@@ -1,9 +1,12 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { Roles } from "../auth/auth.decorators";
 import { PrismaService } from "../prisma/prisma.module";
 import { BudgetService } from "./budget.service";
 import { CreateBudgetItemDto, CreateExpenseDto, UpdateBudgetItemDto, UpdateExpenseDto } from "./dto/budget.dto";
 
 /** Dự toán. */
+@Roles(UserRole.ORGANIZER)
 @Controller("resources/budget-items")
 export class BudgetItemsController {
   constructor(private readonly prisma: PrismaService, private readonly budget: BudgetService) {}
@@ -41,6 +44,7 @@ export class BudgetItemsController {
 }
 
 /** Thực chi. */
+@Roles(UserRole.ORGANIZER)
 @Controller("resources/expenses")
 export class ExpensesController {
   constructor(private readonly prisma: PrismaService) {}
@@ -77,6 +81,7 @@ export class ExpensesController {
 }
 
 /** Bảng so sánh dự toán – thực chi theo sự kiện. */
+@Roles(UserRole.ORGANIZER)
 @Controller("resources/budget-summary")
 export class BudgetSummaryController {
   constructor(private readonly budget: BudgetService) {}

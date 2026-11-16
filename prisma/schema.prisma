@@ -114,6 +114,7 @@ model Event {
   checkInAttempts  CheckInAttempt[]
   devices          Device[]
   sensorReadings   SensorReading[]
+  speakers         Speaker[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -121,15 +122,36 @@ model Event {
 }
 
 model ScheduleItem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   eventId     String
-  title       String   @db.VarChar(191)
-  description String?  @db.Text
+  title       String    @db.VarChar(191)
+  description String?   @db.Text
   startsAt    DateTime
   endsAt      DateTime
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  /// Phòng / sân khấu diễn ra phiên.
+  room        String?   @db.VarChar(100)
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  speakers    Speaker[]
 
   @@index([eventId, startsAt])
+}
+
+/// Diễn giả của sự kiện; một diễn giả có thể tham gia nhiều phiên và ngược lại.
+model Speaker {
+  id           String         @id @default(cuid())
+  eventId      String
+  fullName     String         @db.VarChar(191)
+  title        String?        @db.VarChar(191)
+  organization String?        @db.VarChar(191)
+  bio          String?        @db.Text
+  email        String?        @db.VarChar(191)
+  avatarUrl    String?        @db.VarChar(500)
+  event        Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sessions     ScheduleItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([eventId])
 }
 
 model Registration {
@@ -225,6 +247,9 @@ model SensorReading {
   eventId    String
   deviceId   String
   sensorType SensorType
+  /// Khu vực đo, ví dụ: "Cổng A", "Hội trường". Mặc định lấy theo vị trí thiết bị.
+  zone       String?    @db.VarChar(100)
+  /// Giá trị đo; với PEOPLE_COUNT là số người trong khu vực.
   value      Decimal    @db.Decimal(12, 3)
   unit       String     @db.VarChar(20)
   recordedAt DateTime
@@ -233,6 +258,7 @@ model SensorReading {
   createdAt  DateTime   @default(now())
 
   @@index([eventId, sensorType, recordedAt])
+  @@index([eventId, zone, recordedAt])
   @@index([deviceId, recordedAt])
 }
 

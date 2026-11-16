@@ -1,0 +1,23 @@
+import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { AuthUser, CurrentUser, Roles } from "../auth/auth.decorators";
+import { CheckInDto, CheckInStatsQuery } from "./check-in.dto";
+import { CheckInService } from "./check-in.service";
+
+@Roles(UserRole.ORGANIZER)
+@Controller("check-in")
+export class CheckInController {
+  constructor(private readonly checkIns: CheckInService) {}
+
+  /** Trả 200 cho mọi kết quả quét; xem trường `result` / `accepted`. */
+  @Post()
+  @HttpCode(200)
+  checkIn(@Body() dto: CheckInDto, @CurrentUser() user: AuthUser) {
+    return this.checkIns.checkIn(dto, user.id);
+  }
+
+  @Get("events/:eventId/stats")
+  stats(@Param("eventId") eventId: string, @Query() query: CheckInStatsQuery) {
+    return this.checkIns.stats(eventId, query.windowMinutes);
+  }
+}

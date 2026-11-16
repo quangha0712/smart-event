@@ -17,7 +17,10 @@ export class EventsService {
   getById(id: string) {
     return this.prisma.event.findUnique({
       where: { id },
-      include: { schedules: true, _count: { select: { registrations: true } } },
+      include: {
+        schedules: { orderBy: { startsAt: "asc" }, include: { speakers: true } },
+        speakers: { orderBy: { fullName: "asc" } },
+        _count: { select: { registrations: true } } },
     });
   }
 

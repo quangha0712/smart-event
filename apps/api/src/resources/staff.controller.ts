@@ -1,4 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
+import { Roles } from "../auth/auth.decorators";
 import { PrismaService } from "../prisma/prisma.module";
 import {
   CreateStaffAssignmentDto,
@@ -7,6 +9,7 @@ import {
   UpdateStaffDto,
 } from "./dto/staff.dto";
 
+@Roles(UserRole.ORGANIZER)
 @Controller("resources/staff")
 export class StaffController {
   constructor(private readonly prisma: PrismaService) {}
@@ -42,6 +45,7 @@ export class StaffController {
 }
 
 /** Phân công nhân sự vào sự kiện. */
+@Roles(UserRole.ORGANIZER)
 @Controller("resources/staff-assignments")
 export class StaffAssignmentsController {
   constructor(private readonly prisma: PrismaService) {}
