@@ -27,7 +27,7 @@ Các endpoint AI yêu cầu cấu hình `AI_API_KEY`, `AI_API_BASE_URL`, `AI_MOD
 
 ### Phân tích tín hiệu rủi ro check-in
 
-`POST /api/ai/check-in-analysis` nhận `eventId`, `from` và `to` theo ISO 8601. Backend lấy thống kê và chuỗi lần quét theo từng vé trong đúng khoảng thời gian này, gửi cho LLM đánh giá, sau đó áp dụng cả ba chính sách hậu xử lý cố định.
+`POST /api/ai/check-in-analysis` nhận `eventId`, `from` và `to` theo ISO 8601. Backend lấy thống kê và chuỗi lần quét theo từng vé trong đúng khoảng thời gian này, gửi cùng prompt/rule cho LLM đánh giá, sau đó hậu kiểm verdict/confidence/evidence với bốn rule.
 
 ```json
 {
@@ -37,9 +37,9 @@ Các endpoint AI yêu cầu cấu hình `AI_API_KEY`, `AI_API_BASE_URL`, `AI_MOD
 }
 ```
 
-Frontend chỉ gửi `eventId`, `from`, `to`; không gửi hoặc lựa chọn rule. Backend từ chối thời điểm không hợp lệ, `from > to` hoặc khoảng dài hơn 30 ngày. Backend tự lấy log trong khoảng đã chọn và chạy cả ba rule với ngưỡng nội bộ cố định: 5 phút, 10 phút, cụm 5 phút và khoảng cách cụm 30 phút. Seed tạo đủ ba tình huống khớp rule và ba tình huống đối chứng; `prisma/seed.ts` in ra khoảng `from`/`to` để gọi API với đúng dữ liệu seed.
+Frontend chỉ gửi `eventId`, `from`, `to`; không gửi hoặc lựa chọn rule. Backend từ chối thời điểm không hợp lệ, `from > to` hoặc khoảng dài hơn 30 ngày. Backend tự lấy log trong khoảng đã chọn và chạy bốn rule cố định: lặp dồn dập, lặp kéo dài, nhiều cụm tách biệt và nhiều lượt `ACCEPTED` gần đồng thời trên các máy khác nhau. Seed tạo tám tình huống dương tính (hai cho mỗi rule) và ba tình huống đối chứng; `prisma/seed.ts` in ra khoảng `from`/`to` để gọi API với đúng dữ liệu seed.
 
-Backend trả `isFraud: true` theo chính sách demo nếu LLM trả `fraud_suspected`, có evidence và khớp ít nhất một trong ba rule cố định: (1) confidence >=0.85, `ACCEPTED` rồi >=3 `ALREADY_USED` trong 5 phút trên >=2 thiết bị; (2) confidence >=0.90, >=5 lượt lặp sau `ACCEPTED`, kéo dài >=10 phút, từ >=2 thiết bị; (3) confidence >=0.90, >=2 cụm lặp (mỗi cụm >=2 lượt trong 5 phút, bắt đầu cách nhau >=30 phút), tổng >=2 thiết bị và ít nhất một cụm được quét từ >=2 thiết bị. `isFraud: true` ở đây nghĩa là **mẫu đáng nghi cần rà soát**, không phải bằng chứng xác nhận ý định gian lận. `deviceId` do client gửi; môi trường production cần đăng ký/xác thực máy quét để chống giả mạo ID. Trả `false` khi LLM trả `not_suspected` với confidence >=0.85 và log vé không có lượt lặp/mã sai; trường hợp khác trả `null`. API không tự chặn vé.
+LLM trả verdict/confidence/evidence cho từng vé; backend chỉ trả `isFraud: true` khi LLM trả `fraud_suspected` với ngưỡng/evidence phù hợp và chuỗi log khớp ít nhất một trong bốn rule. Prompt yêu cầu đánh giá độc lập mọi ticketRef và không bỏ qua rule match chỉ vì có giả thuyết thay thế. `isFraud: true` ở đây nghĩa là **mẫu đáng nghi cần rà soát**, không phải bằng chứng xác nhận ý định gian lận. Thiết bị lấy từ quan hệ `Device` trong DB; production vẫn cần xác thực/quản lý thiết bị. Khi không khớp rule, backend chỉ trả `false` nếu LLM đưa nhận xét không nghi ngờ đủ tin cậy và log vé sạch; nếu không đủ dữ liệu trả `null`. API không tự chặn vé.
 
 Đăng ký nhận `userId` trong body do hệ thống hiện chưa có auth hoàn chỉnh. Khi auth được triển khai, API phải lấy userId từ phiên/token thay vì tin giá trị client gửi lên. Check-in nhận body `{ "qrCode": "...", "deviceId": "scanner-north" }`. Client máy quét phải giữ nguyên `deviceId` cho các lần quét trên cùng máy, không tạo ID mới cho từng request.
 

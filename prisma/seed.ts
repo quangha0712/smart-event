@@ -232,6 +232,51 @@ async function main() {
       acceptedDevices: ["scanner-north", "scanner-east"],
       repeats: [],
     },
+    // Bộ mẫu thứ hai cho mỗi rule để demo có nhiều vé dương tính độc lập.
+    {
+      suffix: "rapid-2",
+      qrCode: "DEMO-QR-RAPID-REPEAT-2",
+      acceptedMinutesAgo: 20,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 19, deviceId: "scanner-north" },
+        { minutesAgo: 18.5, deviceId: "scanner-east" },
+        { minutesAgo: 18, deviceId: "scanner-south" },
+        { minutesAgo: 17.5, deviceId: "scanner-north" },
+      ],
+    },
+    {
+      suffix: "persistent-2",
+      qrCode: "DEMO-QR-PERSISTENT-REPEAT-2",
+      acceptedMinutesAgo: 45,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 40, deviceId: "scanner-north" },
+        { minutesAgo: 35, deviceId: "scanner-west" },
+        { minutesAgo: 30, deviceId: "scanner-north" },
+        { minutesAgo: 25, deviceId: "scanner-west" },
+        { minutesAgo: 22, deviceId: "scanner-north" },
+      ],
+    },
+    {
+      suffix: "bursts-2",
+      qrCode: "DEMO-QR-SEPARATE-BURSTS-2",
+      acceptedMinutesAgo: 58,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 53, deviceId: "scanner-north" },
+        { minutesAgo: 52, deviceId: "scanner-east" },
+        { minutesAgo: 11, deviceId: "scanner-north" },
+        { minutesAgo: 10, deviceId: "scanner-east" },
+      ],
+    },
+    {
+      suffix: "multiple-accepted-2",
+      qrCode: "DEMO-QR-MULTIPLE-ACCEPTED-2",
+      acceptedMinutesAgo: 3,
+      acceptedDevices: ["scanner-south", "scanner-west"],
+      repeats: [],
+    },
   ];
 
   const seedNow = Date.now();
@@ -283,7 +328,7 @@ async function main() {
 
   console.log(`Seeded: admin@example.com, ${organizer.email}, ${attendee.email} (mật khẩu: ${DEMO_PASSWORD})`);
   console.log(`Mã QR vé demo: ${qrCode}`);
-  console.log("AI check-in scenarios: RAPID-REPEAT, PERSISTENT-REPEAT, SEPARATE-BURSTS, SAME-DEVICE-CONTROL, TWO-REPEATS-CONTROL, NORMAL-CONTROL, MULTIPLE-ACCEPTED.");
+  console.log("AI check-in scenarios: 8 positive rule fixtures (2 per rule) and 3 control fixtures.");
   console.log(`AI analysis range: from=${new Date(seedNow - 60 * 60_000).toISOString()} to=${new Date(seedNow).toISOString()}`);
 }
 

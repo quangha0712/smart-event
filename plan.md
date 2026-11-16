@@ -349,8 +349,8 @@ TV4 sở hữu database và luồng đăng ký → vé QR → check-in, cùng gi
    - TV4 sở hữu `prompts/checkin-analysis.prompt.ts`, method `checkInAnalysis` trong `ai.controller.ts`/`ai.service.ts` và endpoint `POST /api/ai/check-in-analysis`.
    - Điều chỉnh endpoint nhận `eventId` và khoảng thời gian; backend truy vấn lịch sử quét trong database, tổng hợp số liệu rồi gửi AI. Không yêu cầu người gọi tự nhập các tổng số liệu.
    - TV3 sở hữu kết nối provider AI dùng chung trong `ai.service.ts`; TV4 chỉ sửa prompt và method check-in, không sửa cấu hình provider/key/request chung.
-   - Frontend chỉ gửi `eventId`, `from`, `to` theo ISO 8601; backend truy vấn log theo vé có `deviceId` trong đúng khoảng thời gian này, tự chạy cả ba rule nội bộ và trả kết quả/căn cứ. Frontend không gửi ngưỡng hoặc lựa chọn rule.
-   - Các ngưỡng nội bộ: (1) confidence >= 0.85, `ACCEPTED` rồi >=3 `ALREADY_USED` trong 5 phút trên >=2 thiết bị; (2) confidence >= 0.90, >=5 lượt lặp sau `ACCEPTED`, kéo dài >=10 phút, từ >=2 thiết bị; (3) confidence >= 0.90, hai cụm lặp (mỗi cụm >=2 lượt trong 5 phút, cách nhau >=30 phút), tổng >=2 thiết bị và một cụm có >=2 thiết bị. Seed tạo ba trường hợp dương tính và ba mẫu đối chứng với thời điểm động, đồng thời in khoảng `from`/`to` để gọi API. `deviceId` client gửi chưa tự xác thực thiết bị thật. Trả `false` khi LLM trả `not_suspected` với confidence >= 0.85 và vé không có lượt lặp/mã sai; các trường hợp khác là chưa kết luận.
+   - Frontend chỉ gửi `eventId`, `from`, `to` theo ISO 8601; backend truy vấn log theo vé có máy quét trong đúng khoảng thời gian này rồi gửi prompt, ruleWindows và dữ liệu từng vé cho LLM tự đánh giá. Frontend không gửi ngưỡng hoặc lựa chọn rule.
+   - LLM nhận prompt, log từng vé và bốn rule để tự đánh giá: (1) sau `ACCEPTED`, >=3 `ALREADY_USED` trong 5 phút trên >=2 thiết bị; (2) >=5 lượt lặp sau `ACCEPTED`, kéo dài >=10 phút, từ >=2 thiết bị; (3) hai cụm lặp, mỗi cụm >=2 lượt trong 5 phút, cách nhau >=30 phút, tổng >=2 thiết bị và một cụm có >=2 thiết bị; (4) cùng vé có >=2 lượt `ACCEPTED` trên >=2 thiết bị trong <=10 giây. Backend chỉ gắn `isFraud: true` khi LLM trả `fraud_suspected` với confidence/evidence đạt ngưỡng và DB log khớp rule. Prompt yêu cầu đánh giá mỗi vé độc lập; seed tạo tám mẫu dương tính (hai cho mỗi rule) và ba mẫu đối chứng với thời điểm động, đồng thời in khoảng `from`/`to` để gọi API. LLM có tính không xác định nên không thể bảo đảm tuyệt đối response giống nhau mọi lần. `deviceId`/mã thiết bị cần được xác thực trước khi dùng trong production.
    - `isFraud: true` chỉ là cờ **mẫu hành vi đáng nghi theo quy ước demo**, luôn cần người tổ chức rà soát; không chứng minh ý định gian lận và không tự chặn người tham dự.
 
 6. **Audit log** — `apps/api/src/audit-log/`
@@ -363,7 +363,7 @@ TV4 sở hữu database và luồng đăng ký → vé QR → check-in, cùng gi
    - Ghi work log và monitoring log phần Backend 2 tại `docs/05-execution-and-monitoring/work-log.md` và `monitoring-log.md`.
 
 8. **Kiểm thử phần Backend 2**
-   - Viết unit/integration test trong `apps/api/test/` cho đăng ký trùng, hết sức chứa, QR không hợp lệ, check-in hợp lệ/lặp, lọc audit log và ba rule AI.
+   - Viết unit/integration test trong `apps/api/test/` cho đăng ký trùng, hết sức chứa, QR không hợp lệ, check-in hợp lệ/lặp, lọc audit log và bốn rule AI.
    - Cập nhật `tests/test-cases/registration.md`, `qr-ticket.md`, `check-in.md`, `check-in-ai.md`; lưu kết quả/minh chứng thật tại `tests/test-evidence/` sau khi chạy.
 
 **Tiêu chí nghiệm thu phần TV4**
