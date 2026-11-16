@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, ApiError, UNAUTHORIZED_EVENT } from "@/lib/api";
+import { HOME_PATH } from "@/lib/navigation";
 import { clearSession, getStoredUser, getToken, saveSession, saveUser } from "@/lib/session";
 import type { AuthUser, LoginResponse, UserRole } from "@/types/auth";
 
@@ -10,6 +11,8 @@ type AuthStatus = "loading" | "authenticated" | "anonymous";
 type AuthContextValue = {
   user: AuthUser | null;
   status: AuthStatus;
+  /** true khi người dùng vừa bấm Đăng xuất (khác với phiên hết hạn). */
+  signedOut: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
   /** ADMIN luôn được tính là có quyền. */
@@ -26,6 +29,7 @@ export function hasRole(user: AuthUser | null, roles: readonly UserRole[]) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const [signedOut, setSignedOut] = useState(false);
 
   // Khôi phục phiên khi tải trang: hiện ngay user đã lưu, sau đó hỏi lại /auth/me để chắc token còn hợp lệ
   // và quyền chưa bị ADMIN đổi.
@@ -74,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const result = await api.post<LoginResponse>("/auth/login", { email, password }, { auth: false });
     saveSession(result.accessToken, result.user);
+    setSignedOut(false);
     setUser(result.user);
     setStatus("authenticated");
     return result.user;
@@ -81,13 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     clearSession();
+    setSignedOut(true);
     setUser(null);
     setStatus("anonymous");
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, logout, hasRole: (...roles) => hasRole(user, roles) }),
-    [user, status, login, logout],
+    () => ({ user, status, signedOut, login, logout, hasRole: (...roles) => hasRole(user, roles) }),
+    [user, status, signedOut, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -99,7 +105,7 @@ export function useAuth() {
   return ctx;
 }
 
-/** Trang mặc định sau khi đăng nhập theo quyền. */
-export function homePathFor(user: AuthUser) {
-  return user.role === "ATTENDEE" ? "/events" : "/dashboard";
+/** Trang mặc định sau khi đăng nhập. */
+export function homePathFor(_user?: AuthUser | null) {
+  return HOME_PATH;
 }

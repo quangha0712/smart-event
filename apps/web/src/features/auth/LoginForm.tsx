@@ -3,11 +3,18 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
+import { canAccess } from "@/lib/navigation";
+import type { AuthUser } from "@/types/auth";
 import { homePathFor, useAuth } from "./AuthProvider";
 
 /** Chỉ cho phép quay về đường dẫn nội bộ, tránh open redirect kiểu ?next=https://... hoặc //evil.com. */
 function safeNext(next: string | null) {
-  return next && next.startsWith("/") && !next.startsWith("//") && next !== "/login" ? next : null;
+  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : null;
+}
+
+/** Trang đích sau đăng nhập: về `next` nếu tài khoản có quyền mở trang đó, ngược lại về trang chủ. */
+function destinationFor(user: AuthUser, next: string | null) {
+  return next && canAccess(user, next) ? next : homePathFor(user);
 }
 
 const DEMO_ACCOUNTS = ["admin@example.com", "organizer@example.com", "attendee@example.com"];
@@ -24,7 +31,7 @@ export function LoginForm() {
 
   // Đã đăng nhập thì không ở lại trang login.
   useEffect(() => {
-    if (status === "authenticated" && user) router.replace(next ?? homePathFor(user));
+    if (status === "authenticated" && user) router.replace(destinationFor(user, next));
   }, [status, user, next, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -33,7 +40,7 @@ export function LoginForm() {
     setSubmitting(true);
     try {
       const loggedIn = await login(email.trim(), password);
-      router.replace(next ?? homePathFor(loggedIn));
+      router.replace(destinationFor(loggedIn, next));
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "Không thể đăng nhập, vui lòng thử lại.");
     } finally {

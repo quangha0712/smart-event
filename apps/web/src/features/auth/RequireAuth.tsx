@@ -11,13 +11,16 @@ import { hasRole, homePathFor, useAuth } from "./AuthProvider";
  * Sai quyền → hiện thông báo 403. Đây chỉ là chặn ở giao diện; API vẫn tự kiểm tra quyền.
  */
 export function RequireAuth({ roles = [], children }: { roles?: UserRole[]; children: React.ReactNode }) {
-  const { user, status } = useAuth();
+  const { user, status, signedOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (status === "anonymous") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [status, pathname, router]);
+    if (status !== "anonymous") return;
+    // Bấm Đăng xuất → về /login trống, để người đăng nhập sau không bị đưa lại trang của người trước.
+    // Phiên hết hạn / chưa đăng nhập → giữ ?next= để đăng nhập xong quay lại đúng trang.
+    router.replace(signedOut ? "/login" : `/login?next=${encodeURIComponent(pathname)}`);
+  }, [status, signedOut, pathname, router]);
 
   if (status === "loading" || (status === "anonymous" && !user)) {
     return (
@@ -37,7 +40,7 @@ export function RequireAuth({ roles = [], children }: { roles?: UserRole[]; chil
         </p>
         {user && (
           <Link className="button" href={homePathFor(user)}>
-            Về trang của tôi
+            Về trang chủ
           </Link>
         )}
       </section>
