@@ -98,6 +98,81 @@ export class CheckInService {
     };
   }
 
+  /** Lấy số liệu phân tích theo khoảng thời gian tuyệt đối, dùng log của schema hiện tại. */
+  async getAnalysisSummary(eventId: string, from: Date, to: Date) {
+    await this.prisma.event.findUniqueOrThrow({ where: { id: eventId }, select: { id: true } });
+    const attempts = await this.prisma.checkInAttempt.findMany({
+      where: { eventId, createdAt: { gte: from, lte: to } },
+      select: { ticketId: true, result: true },
+      take: 10_000,
+    });
+    const accepted = attempts.filter((attempt) => attempt.result === CheckInResult.ACCEPTED).length;
+    const repeatedScans = attempts.filter((attempt) => attempt.result === CheckInResult.DUPLICATE).length;
+    const invalidCodes = attempts.filter((attempt) =>
+      attempt.result === CheckInResult.INVALID_CODE || attempt.result === CheckInResult.WRONG_EVENT,
+    ).length;
+    const duplicatesByTicket = new Map<string, number>();
+    for (const attempt of attempts) {
+      if (attempt.ticketId && attempt.result === CheckInResult.DUPLICATE) {
+        duplicatesByTicket.set(attempt.ticketId, (duplicatesByTicket.get(attempt.ticketId) ?? 0) + 1);
+      }
+    }
+    return {
+      totalAttempts: attempts.length,
+      accepted,
+      repeatedScans,
+      invalidCodes,
+      ticketsWithRepeatedScans: [...duplicatesByTicket.values()].filter((count) => count > 0).length,
+      ticketsWithHighRepeatCount: [...duplicatesByTicket.values()].filter((count) => count >= 3).length,
+    };
+  }
+
+  /** Trả lịch sử từng vé cho LLM, chuyển trạng thái DB sang thuật ngữ phân tích của TV4. */
+  async getTicketAnalysisPatterns(eventId: string, from: Date, to: Date) {
+    const attempts = await this.prisma.checkInAttempt.findMany({
+      where: { eventId, ticketId: { not: null }, createdAt: { gte: from, lte: to } },
+      select: {
+        ticketId: true,
+        result: true,
+        device: { select: { code: true } },
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+      take: 10_000,
+    });
+    const ticketIds = [...new Set(attempts.flatMap((attempt) => attempt.ticketId ? [attempt.ticketId] : []))];
+    const tickets = ticketIds.length
+      ? await this.prisma.ticket.findMany({
+          where: { id: { in: ticketIds } },
+          select: { id: true, checkedInAt: true },
+        })
+      : [];
+    const checkedInAtByTicketId = new Map(tickets.map((ticket) => [ticket.id, ticket.checkedInAt]));
+
+    return ticketIds.map((ticketId) => {
+      const ticketAttempts = attempts.filter((attempt) => attempt.ticketId === ticketId);
+      const acceptedAt = checkedInAtByTicketId.get(ticketId);
+      const hasAcceptedInRange = ticketAttempts.some((attempt) => attempt.result === CheckInResult.ACCEPTED);
+      const normalizedAttempts = [
+        ...(!hasAcceptedInRange && acceptedAt && acceptedAt < from
+          ? [{ scannedAt: acceptedAt.toISOString(), status: "ACCEPTED" as const, deviceId: "legacy-unknown" }]
+          : []),
+        ...ticketAttempts.map((attempt) => ({
+          scannedAt: attempt.createdAt.toISOString(),
+          status: attempt.result === CheckInResult.ACCEPTED
+            ? "ACCEPTED" as const
+            : attempt.result === CheckInResult.DUPLICATE
+              ? "ALREADY_USED" as const
+              : attempt.result === CheckInResult.NOT_ELIGIBLE
+                ? "NOT_ELIGIBLE" as const
+                : "INVALID" as const,
+          deviceId: attempt.device?.code ?? "legacy-unknown",
+        })),
+      ];
+      return { ticketRef: ticketId, attempts: normalizedAttempts };
+    }).filter((pattern) => pattern.attempts.length > 0);
+  }
+
   private findTicket(method: CheckInMethod, code: string) {
     const include = { registration: { select: { eventId: true, status: true, user: { select: { fullName: true } } } } };
     if (method === CheckInMethod.NFC) {

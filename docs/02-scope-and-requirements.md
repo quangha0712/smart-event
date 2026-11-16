@@ -20,7 +20,7 @@
 - FR-10: AI tạo bản nháp tiến độ/rủi ro từ thông tin PM nhập; PM duyệt trước khi đưa vào báo cáo.
 - FR-11: AI chuyển mô tả bài toán thành bản nháp yêu cầu/use case để BA rà soát.
 - FR-12: AI gợi ý dự toán sơ bộ theo loại sự kiện, số người, thời lượng và địa điểm; ban tổ chức xác nhận số liệu.
-- FR-13: AI phân tích số liệu check-in tổng hợp để nêu tín hiệu cần kiểm tra; không tự kết luận gian lận hoặc chặn người tham dự.
+- FR-13: AI phân tích số liệu và lịch sử quét check-in theo vé từ database; backend đối chiếu đánh giá của AI với chính sách demo để trả phân loại `isFraud` (true/false/null) kèm bằng chứng. Kết quả cần người tổ chức rà soát và không tự động chặn người tham dự.
 - FR-14: AI nhóm chủ đề đánh giá sự kiện và gợi ý hành động cải thiện cho ban tổ chức.
 
 ## Yêu cầu phi chức năng

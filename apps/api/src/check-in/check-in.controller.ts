@@ -1,11 +1,13 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
+import { ApiTags } from "@nestjs/swagger";
 import { AuthUser, CurrentUser, Roles } from "../auth/auth.decorators";
 import { CheckInDto, CheckInStatsQuery } from "./check-in.dto";
 import { CheckInService } from "./check-in.service";
 
 @Roles(UserRole.ORGANIZER)
 @Controller("check-in")
+@ApiTags("Check-in")
 export class CheckInController {
   constructor(private readonly checkIns: CheckInService) {}
 

@@ -1,3 +1,3 @@
 # API automated tests
 
-Đặt unit/integration test cho backend tại đây; test case thủ công và E2E ở thư mục gốc `tests/`.
+Unit test backend đặt tại đây và chạy bằng `npm run test --workspace apps/api`. E2E config riêng ở `jest-e2e.json`; test case thủ công/evidence ở thư mục gốc `tests/`.

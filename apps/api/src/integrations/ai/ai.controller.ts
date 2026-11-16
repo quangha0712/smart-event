@@ -1,20 +1,21 @@
-import { BadRequestException, Body, Controller, Param, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Param, Post } from "@nestjs/common";
+import { ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { Roles } from "../../auth/auth.decorators";
-import { CheckInStatsQuery } from "../../check-in/check-in.dto";
 import { CheckInService } from "../../check-in/check-in.service";
 import { PrismaService } from "../../prisma/prisma.module";
 import { AiService } from "./ai.service";
+import { CHECKIN_RULE_WINDOWS } from "./check-in-analysis.policy";
 import {
   BudgetEstimateInput,
-  CheckInAnalysisInput,
+  CheckInAnalysisRequest,
   ProjectSummaryInput,
   RequirementsDraftInput,
 } from "./ai.types";
 
-/** Mỗi lần gọi tốn phí provider AI nên chỉ ORGANIZER / ADMIN được dùng. */
 @Roles(UserRole.ORGANIZER)
 @Controller("ai")
+@ApiTags("AI")
 export class AiController {
   constructor(
     private readonly ai: AiService,
@@ -37,22 +38,27 @@ export class AiController {
     return this.ai.budgetEstimate(body);
   }
 
-  /** Phân tích với số liệu nhập tay (thử kịch bản). Dùng endpoint theo sự kiện bên dưới cho dữ liệu thật. */
   @Post("check-in-analysis")
-  checkInAnalysis(@Body() body: CheckInAnalysisInput) {
-    if (body.accepted + body.repeatedScans + body.invalidCodes > body.totalAttempts) {
-      throw new BadRequestException("Tổng các loại lượt quét không được vượt totalAttempts.");
+  async checkInAnalysis(@Body() body: CheckInAnalysisRequest) {
+    const from = new Date(body.from);
+    const to = new Date(body.to);
+    if (from > to) throw new BadRequestException("from không được sau to.");
+    if (to.valueOf() - from.valueOf() > 30 * 24 * 60 * 60_000) {
+      throw new BadRequestException("Khoảng phân tích tối đa là 30 ngày.");
     }
-    return this.ai.checkInAnalysis(body);
-  }
 
-  /** Phân tích check-in từ dữ liệu thật trong bảng CheckInAttempt. */
-  @Post("events/:eventId/check-in-analysis")
-  async checkInAnalysisFromData(@Param("eventId") eventId: string, @Query() query: CheckInStatsQuery) {
-    const stats = await this.checkIns.stats(eventId, query.windowMinutes);
-    if (stats.totalAttempts === 0) throw new BadRequestException("Sự kiện chưa có lượt quét nào để phân tích.");
-    const { notEligible: _notEligible, ...input } = stats;
-    return { stats, ...(await this.ai.checkInAnalysis(input)) };
+    const [metrics, ticketPatterns] = await Promise.all([
+      this.checkIns.getAnalysisSummary(body.eventId, from, to),
+      this.checkIns.getTicketAnalysisPatterns(body.eventId, from, to),
+    ]);
+    return this.ai.checkInAnalysis({
+      eventId: body.eventId,
+      from,
+      to,
+      ...metrics,
+      ruleWindows: { ...CHECKIN_RULE_WINDOWS },
+      ticketPatterns,
+    });
   }
 
   @Post("events/:eventId/feedback-insights")

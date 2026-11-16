@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { DeviceType, EventStatus, PrismaClient, RegistrationStatus, SensorType, UserRole } from "@prisma/client";
+import { CheckInMethod, CheckInResult, DeviceType, EventStatus, PrismaClient, RegistrationStatus, SensorType, UserRole } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { signTicketCode } from "../apps/api/src/tickets/ticket-code";
 
@@ -146,8 +146,190 @@ async function main() {
     });
   }
 
+  const scannerCodes = ["scanner-north", "scanner-east", "scanner-south", "scanner-west"];
+  const scannerIds = new Map<string, string>();
+  for (const code of scannerCodes) {
+    const scanner = await prisma.device.upsert({
+      where: { code },
+      update: { eventId, isActive: true },
+      create: { code, name: `Máy quét ${code}`, type: DeviceType.QR_SCANNER, eventId, isSimulated: true },
+      select: { id: true },
+    });
+    scannerIds.set(code, scanner.id);
+  }
+
+  const aiScenarios = [
+    {
+      suffix: "rapid",
+      qrCode: "DEMO-QR-RAPID-REPEAT",
+      acceptedMinutesAgo: 12,
+      acceptedDevices: ["scanner-north"],
+      repeats: [
+        { minutesAgo: 11, deviceId: "scanner-east" },
+        { minutesAgo: 10.5, deviceId: "scanner-south" },
+        { minutesAgo: 10, deviceId: "scanner-west" },
+        { minutesAgo: 9.5, deviceId: "scanner-east" },
+        { minutesAgo: 9, deviceId: "scanner-south" },
+      ],
+    },
+    {
+      suffix: "persistent",
+      qrCode: "DEMO-QR-PERSISTENT-REPEAT",
+      acceptedMinutesAgo: 35,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 30, deviceId: "scanner-west" },
+        { minutesAgo: 25, deviceId: "scanner-south" },
+        { minutesAgo: 20, deviceId: "scanner-west" },
+        { minutesAgo: 15, deviceId: "scanner-south" },
+        { minutesAgo: 12, deviceId: "scanner-west" },
+      ],
+    },
+    {
+      suffix: "bursts",
+      qrCode: "DEMO-QR-SEPARATE-BURSTS",
+      acceptedMinutesAgo: 55,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 50, deviceId: "scanner-north" },
+        { minutesAgo: 49, deviceId: "scanner-east" },
+        { minutesAgo: 8, deviceId: "scanner-north" },
+        { minutesAgo: 7, deviceId: "scanner-east" },
+      ],
+    },
+    {
+      suffix: "same-device-control",
+      qrCode: "DEMO-QR-SAME-DEVICE-CONTROL",
+      acceptedMinutesAgo: 18,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 17, deviceId: "scanner-west" },
+        { minutesAgo: 16.5, deviceId: "scanner-west" },
+        { minutesAgo: 16, deviceId: "scanner-west" },
+      ],
+    },
+    {
+      suffix: "few-repeats-control",
+      qrCode: "DEMO-QR-TWO-REPEATS-CONTROL",
+      acceptedMinutesAgo: 5,
+      acceptedDevices: ["scanner-north"],
+      repeats: [
+        { minutesAgo: 4, deviceId: "scanner-north" },
+        { minutesAgo: 3, deviceId: "scanner-east" },
+      ],
+    },
+    {
+      suffix: "normal-control",
+      qrCode: "DEMO-QR-NORMAL-CONTROL",
+      acceptedMinutesAgo: 2,
+      acceptedDevices: ["scanner-south"],
+      repeats: [],
+    },
+    {
+      suffix: "multiple-accepted",
+      qrCode: "DEMO-QR-MULTIPLE-ACCEPTED",
+      acceptedMinutesAgo: 1,
+      acceptedDevices: ["scanner-north", "scanner-east"],
+      repeats: [],
+    },
+    // Bộ mẫu thứ hai cho mỗi rule để demo có nhiều vé dương tính độc lập.
+    {
+      suffix: "rapid-2",
+      qrCode: "DEMO-QR-RAPID-REPEAT-2",
+      acceptedMinutesAgo: 20,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 19, deviceId: "scanner-north" },
+        { minutesAgo: 18.5, deviceId: "scanner-east" },
+        { minutesAgo: 18, deviceId: "scanner-south" },
+        { minutesAgo: 17.5, deviceId: "scanner-north" },
+      ],
+    },
+    {
+      suffix: "persistent-2",
+      qrCode: "DEMO-QR-PERSISTENT-REPEAT-2",
+      acceptedMinutesAgo: 45,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 40, deviceId: "scanner-north" },
+        { minutesAgo: 35, deviceId: "scanner-west" },
+        { minutesAgo: 30, deviceId: "scanner-north" },
+        { minutesAgo: 25, deviceId: "scanner-west" },
+        { minutesAgo: 22, deviceId: "scanner-north" },
+      ],
+    },
+    {
+      suffix: "bursts-2",
+      qrCode: "DEMO-QR-SEPARATE-BURSTS-2",
+      acceptedMinutesAgo: 58,
+      acceptedDevices: ["scanner-west"],
+      repeats: [
+        { minutesAgo: 53, deviceId: "scanner-north" },
+        { minutesAgo: 52, deviceId: "scanner-east" },
+        { minutesAgo: 11, deviceId: "scanner-north" },
+        { minutesAgo: 10, deviceId: "scanner-east" },
+      ],
+    },
+    {
+      suffix: "multiple-accepted-2",
+      qrCode: "DEMO-QR-MULTIPLE-ACCEPTED-2",
+      acceptedMinutesAgo: 3,
+      acceptedDevices: ["scanner-south", "scanner-west"],
+      repeats: [],
+    },
+  ];
+
+  const seedNow = Date.now();
+  for (const scenario of aiScenarios) {
+    const user = await demoUser(
+      `demo-${scenario.suffix}@example.com`,
+      `Demo AI ${scenario.suffix}`,
+      UserRole.ATTENDEE,
+    );
+    const scenarioRegistration = await prisma.registration.upsert({
+      where: { userId_eventId: { userId: user.id, eventId } },
+      update: { status: RegistrationStatus.CONFIRMED },
+      create: { userId: user.id, eventId, status: RegistrationStatus.CONFIRMED },
+    });
+    const ticketId = `demo-ai-ticket-${scenario.suffix}`;
+    const signedQr = signTicketCode(ticketId);
+    const acceptedAt = new Date(seedNow - scenario.acceptedMinutesAgo * 60_000);
+    const scenarioTicket = await prisma.ticket.upsert({
+      where: { registrationId: scenarioRegistration.id },
+      update: { qrCode: signedQr, checkedInAt: acceptedAt },
+      create: { id: ticketId, registrationId: scenarioRegistration.id, qrCode: signedQr, checkedInAt: acceptedAt },
+    });
+
+    // Synthetic historical fixtures for AI rule analysis; normal check-in code only accepts a ticket once.
+    await prisma.checkInAttempt.deleteMany({ where: { ticketId: scenarioTicket.id } });
+    await prisma.checkInAttempt.createMany({
+      data: [
+        ...scenario.acceptedDevices.map((deviceCode) => ({
+          eventId,
+          ticketId: scenarioTicket.id,
+          deviceId: scannerIds.get(deviceCode)!,
+          scannedCode: signedQr.slice(0, 191),
+          method: CheckInMethod.QR,
+          result: CheckInResult.ACCEPTED,
+          createdAt: acceptedAt,
+        })),
+        ...scenario.repeats.map((repeat) => ({
+          eventId,
+          ticketId: scenarioTicket.id,
+          deviceId: scannerIds.get(repeat.deviceId)!,
+          scannedCode: signedQr.slice(0, 191),
+          method: CheckInMethod.QR,
+          result: CheckInResult.DUPLICATE,
+          createdAt: new Date(seedNow - repeat.minutesAgo * 60_000),
+        })),
+      ],
+    });
+  }
+
   console.log(`Seeded: admin@example.com, ${organizer.email}, ${attendee.email} (mật khẩu: ${DEMO_PASSWORD})`);
   console.log(`Mã QR vé demo: ${qrCode}`);
+  console.log("AI check-in scenarios: 8 positive rule fixtures (2 per rule) and 3 control fixtures.");
+  console.log(`AI analysis range: from=${new Date(seedNow - 60 * 60_000).toISOString()} to=${new Date(seedNow).toISOString()}`);
 }
 
 main().finally(() => prisma.$disconnect());

@@ -1,10 +1,12 @@
 import { Body, Controller, Get, NotFoundException, Param, Post } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
+import { ApiTags } from "@nestjs/swagger";
 import { Public, Roles } from "../auth/auth.decorators";
 import { CreateEventDto } from "./dto/create-event.dto";
 import { EventsService } from "./events.service";
 
 @Controller("events")
+@ApiTags("Events")
 export class EventsController {
   constructor(private readonly events: EventsService) {}
 

@@ -1,7 +1,9 @@
 import { Transform, Type } from "class-transformer";
+import { ApiProperty } from "@nestjs/swagger";
 import {
   ArrayMaxSize,
   IsArray,
+  IsDateString,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -97,40 +99,48 @@ export class BudgetEstimateInput {
   currency!: "VND" | "USD";
 }
 
-export class CheckInAnalysisInput {
+export class CheckInAnalysisRequest {
+  @ApiProperty({ example: "demo-smart-event" })
   @Transform(trim)
   @IsString()
   @IsNotEmpty()
   @MaxLength(191)
   eventId!: string;
 
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(1_000_000)
-  totalAttempts!: number;
+  @ApiProperty({ type: String, format: "date-time", example: "2026-11-15T08:00:00.000Z" })
+  @IsDateString()
+  from!: string;
 
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(1_000_000)
-  accepted!: number;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(1_000_000)
-  repeatedScans!: number;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(1_000_000)
-  invalidCodes!: number;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  @Max(100_000)
-  windowMinutes!: number;
+  @ApiProperty({ type: String, format: "date-time", example: "2026-11-15T09:00:00.000Z" })
+  @IsDateString()
+  to!: string;
 }
+
+export type CheckInRuleWindows = {
+  rapidRepeatMinutes: number;
+  persistentRepeatSpanMinutes: number;
+  repeatBurstMinutes: number;
+  repeatBurstSeparationMinutes: number;
+  multipleAcceptedWindowSeconds: number;
+};
+
+export type CheckInAnalysisInput = {
+  eventId: string;
+  from: Date;
+  to: Date;
+  totalAttempts: number;
+  accepted: number;
+  repeatedScans: number;
+  invalidCodes: number;
+  ticketsWithRepeatedScans: number;
+  ticketsWithHighRepeatCount: number;
+  ruleWindows: CheckInRuleWindows;
+  ticketPatterns: Array<{
+    ticketRef: string;
+    attempts: Array<{
+      scannedAt: string;
+      status: "ACCEPTED" | "ALREADY_USED" | "INVALID" | "NOT_ELIGIBLE";
+      deviceId: string;
+    }>;
+  }>;
+};
