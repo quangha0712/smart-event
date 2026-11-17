@@ -58,3 +58,18 @@ export function initials(fullName: string) {
   const first = parts.length > 1 ? parts[0][0] ?? "" : "";
   return (first + last).toUpperCase();
 }
+
+const money = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
+/** API trả Decimal dạng chuỗi ("20000000") – định dạng thành "20.000.000 ₫". */
+export function formatMoney(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return "—";
+  const n = Number(value);
+  return Number.isFinite(n) ? money.format(n) : String(value);
+}
+
+/** ISO → giá trị cho <input type="datetime-local"> theo giờ máy (yyyy-MM-ddTHH:mm). */
+export function toLocalInput(iso: string | null | undefined) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}

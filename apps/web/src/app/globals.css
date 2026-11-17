@@ -371,3 +371,36 @@ a.compact-item:hover { border-color: var(--primary); }
 .status-action { display: flex; flex-direction: column; gap: 4px; }
 .status-action .button { width: 100%; }
 .status-hint { margin: 0; line-height: 1.5; }
+
+/* ---------- Nguồn lực & ngân sách ---------- */
+.resources-toolbar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.resources-event { flex: 1 1 280px; max-width: 480px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  border: 0; background: none; padding: 10px 14px; font: inherit; font-size: 14px; font-weight: 700;
+  color: var(--muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.tab-stack { display: flex; flex-direction: column; gap: 32px; padding-top: 8px; }
+.crud { display: flex; flex-direction: column; gap: 12px; }
+.crud-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.crud-head h2 { margin: 0; font-size: 18px; }
+.crud-head p { margin: 4px 0 0; }
+.crud-form { background: var(--surface); border: 1px solid var(--primary); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.crud-form h3 { margin: 0; font-size: 15px; }
+.crud-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.crud-wide { grid-column: 1 / -1; }
+.crud-total { margin: 0; text-align: right; }
+.table .num { text-align: right; white-space: nowrap; }
+.table td { vertical-align: top; }
+.row-actions { white-space: nowrap; text-align: right; }
+.row-actions .link-button + .link-button { margin-left: 12px; }
+.link-button.danger { color: var(--danger); }
+.row-editing td { background: var(--primary-soft); }
+.variance-over { color: var(--danger); font-weight: 700; }
+.variance-under { color: var(--success); font-weight: 700; }
+.pill-assign-confirmed, .pill-assign-completed { background: var(--success-soft); color: var(--success); }
+.pill-assign-declined { background: var(--danger-soft); color: var(--danger); }
