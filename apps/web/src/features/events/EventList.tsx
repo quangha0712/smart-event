@@ -19,8 +19,7 @@ export function EventList() {
   const isAttendee = user?.role === "ATTENDEE";
   const access = useEventAccess();
   // Gửi kèm token khi đã đăng nhập để API lọc theo người gọi.
-  // TODO(BE): GET /events đang @Public – cần đọc token nếu có: Ban tổ chức chỉ nhận sự kiện mình là thành viên (kèm myRole),
-  // ADMIN nhận tất cả, khách/người tham dự chỉ nhận sự kiện PUBLISHED.
+  // API: Ban tổ chức chỉ nhận sự kiện mình là thành viên (kèm myRole), ADMIN nhận tất cả, khách / người tham dự không thấy bản nháp.
   const events = useApi((signal) => api.get<EventSummary[]>("/events", { auth: Boolean(user), signal }), [user?.id]);
   const mine = useApi(isAttendee ? (signal) => api.get<MyRegistration[]>("/me/registrations", { signal }) : null, [isAttendee]);
   const [filter, setFilter] = useState<Filter>("upcoming");

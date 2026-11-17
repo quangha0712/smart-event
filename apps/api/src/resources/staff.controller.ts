@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
-import { Roles } from "../auth/auth.decorators";
+import { AuthUser, CurrentUser, Roles } from "../auth/auth.decorators";
+import { EVENT_ROLES, EventAccessService, EventRoles } from "../auth/event-access";
 import { PrismaService } from "../prisma/prisma.module";
 import {
   CreateStaffAssignmentDto,
@@ -10,11 +11,9 @@ import {
 } from "./dto/staff.dto";
 
 /*
- * TODO(BE): giới hạn theo thành viên sự kiện – EventMemberGuard @EventRoles(OWNER, CO_ORGANIZER).
- *  - Route có eventId (query/body/:eventId): kiểm tra trực tiếp. Route theo :id bản ghi: tra eventId của bản ghi rồi kiểm tra.
- *  - GET danh sách không truyền eventId: ORGANIZER chỉ nhận bản ghi thuộc sự kiện mình là thành viên (ADMIN: tất cả).
- *  - /resources/staff và /resources/vendors là danh bạ dùng chung (không có eventId) → giữ @Roles(ORGANIZER).
- *  (chi tiết guard + ma trận quyền: ghi chú đầu file src/events/events.controller.ts)
+ * Danh bạ nhân sự dùng chung (không gắn sự kiện) → chỉ cần quyền Ban tổ chức.
+ * Phân công nhân sự gắn với sự kiện → chỉ Chủ sự kiện / Đồng tổ chức của sự kiện (và ADMIN);
+ * danh sách không truyền eventId chỉ trả phân công của các sự kiện mình quản lý.
  */
 @Roles(UserRole.ORGANIZER)
 @Controller("resources/staff")
@@ -55,27 +54,34 @@ export class StaffController {
 @Roles(UserRole.ORGANIZER)
 @Controller("resources/staff-assignments")
 export class StaffAssignmentsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: EventAccessService,
+  ) {}
 
+  @EventRoles(EVENT_ROLES.MANAGERS, { optional: true })
   @Get()
-  list(@Query("eventId") eventId?: string) {
+  async list(@CurrentUser() user: AuthUser, @Query("eventId") eventId?: string) {
     return this.prisma.staffAssignment.findMany({
-      where: { eventId },
+      where: { eventId: await this.access.eventFilter(user, eventId, EVENT_ROLES.MANAGERS) },
       include: { staff: { select: { id: true, fullName: true, phone: true } } },
       orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }],
     });
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS)
   @Post()
   create(@Body() dto: CreateStaffAssignmentDto) {
     return this.prisma.staffAssignment.create({ data: dto });
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS, { resolveFrom: "staffAssignment" })
   @Patch(":id")
   update(@Param("id") id: string, @Body() dto: UpdateStaffAssignmentDto) {
     return this.prisma.staffAssignment.update({ where: { id }, data: dto });
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS, { resolveFrom: "staffAssignment" })
   @Delete(":id")
   @HttpCode(204)
   async remove(@Param("id") id: string) {

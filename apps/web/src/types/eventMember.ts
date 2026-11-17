@@ -16,8 +16,7 @@ export const EVENT_MEMBER_ROLE_HINTS: Record<EventMemberRole, string> = {
 };
 
 /**
- * Phần tử của GET /me/event-memberships (BE chưa làm – xem ghi chú trong apps/api/src/events/events.controller.ts).
- * `event` dùng cùng dạng với GET /events.
+ * Phần tử của GET /me/event-memberships. `event` dùng cùng dạng với GET /events (kèm myRole).
  */
 export type MyEventMembership = {
   eventId: string;

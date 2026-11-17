@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { CheckInMethod, CheckInResult, DeviceType, EventStatus, PrismaClient, RegistrationStatus, SensorType, UserRole } from "@prisma/client";
+import { CheckInMethod, CheckInResult, DeviceType, EventMemberRole, EventStatus, PrismaClient, RegistrationStatus, SensorType, UserRole } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { signTicketCode } from "../apps/api/src/tickets/ticket-code";
 
@@ -21,6 +21,9 @@ async function main() {
   await demoUser("admin@example.com", "Demo Admin", UserRole.ADMIN);
   const organizer = await demoUser("organizer@example.com", "Demo Organizer", UserRole.ORGANIZER);
   const attendee = await demoUser("attendee@example.com", "Demo Attendee", UserRole.ATTENDEE);
+  // Ban tổ chức nhưng chỉ có vai trò trong sự kiện được giao.
+  const coOrganizer = await demoUser("cohost@example.com", "Demo Đồng tổ chức", UserRole.ORGANIZER);
+  const checkinStaff = await demoUser("checkin@example.com", "Demo Nhân viên check-in", UserRole.ORGANIZER);
 
   await prisma.event.upsert({
     where: { id: "demo-smart-event" },
@@ -34,9 +37,40 @@ async function main() {
       endsAt: new Date("2027-05-20T17:00:00+07:00"),
       capacity: 300,
       status: EventStatus.PUBLISHED,
+      createdById: organizer.id,
     },
   });
   const eventId = "demo-smart-event";
+  await prisma.event.update({ where: { id: eventId }, data: { createdById: organizer.id } });
+
+  // Ban tổ chức của sự kiện demo: mỗi vai trò một tài khoản.
+  const member = (userId: string, role: EventMemberRole, forEvent = eventId) =>
+    prisma.eventMember.upsert({
+      where: { eventId_userId: { eventId: forEvent, userId } },
+      update: { role },
+      create: { eventId: forEvent, userId, role, invitedById: role === EventMemberRole.OWNER ? null : organizer.id },
+    });
+  await member(organizer.id, EventMemberRole.OWNER);
+  await member(coOrganizer.id, EventMemberRole.CO_ORGANIZER);
+  await member(checkinStaff.id, EventMemberRole.CHECKIN_STAFF);
+
+  // Sự kiện nháp của người khác: organizer@ KHÔNG thấy, cohost@ là Chủ sự kiện – để demo việc lọc theo thành viên.
+  await prisma.event.upsert({
+    where: { id: "demo-cohost-workshop" },
+    update: {},
+    create: {
+      id: "demo-cohost-workshop",
+      name: "Workshop nội bộ (bản nháp)",
+      description: "Sự kiện nháp chỉ ban tổ chức của nó mới thấy.",
+      location: "Hà Nội",
+      startsAt: new Date("2027-06-10T13:30:00+07:00"),
+      endsAt: new Date("2027-06-10T17:00:00+07:00"),
+      capacity: 40,
+      status: EventStatus.DRAFT,
+      createdById: coOrganizer.id,
+    },
+  });
+  await member(coOrganizer.id, EventMemberRole.OWNER, "demo-cohost-workshop");
 
   await prisma.device.upsert({
     where: { code: "GATE-A-QR" },
@@ -327,6 +361,7 @@ async function main() {
   }
 
   console.log(`Seeded: admin@example.com, ${organizer.email}, ${attendee.email} (mật khẩu: ${DEMO_PASSWORD})`);
+  console.log(`Ban tổ chức sự kiện demo: ${organizer.email} (Chủ sự kiện), ${coOrganizer.email} (Đồng tổ chức), ${checkinStaff.email} (Nhân viên check-in)`);
   console.log(`Mã QR vé demo: ${qrCode}`);
   console.log("AI check-in scenarios: 8 positive rule fixtures (2 per rule) and 3 control fixtures.");
   console.log(`AI analysis range: from=${new Date(seedNow - 60 * 60_000).toISOString()} to=${new Date(seedNow).toISOString()}`);

@@ -14,7 +14,7 @@ export type EventCapability =
 
 /**
  * Ma trận quyền theo vai trò trong sự kiện. Phải khớp với EventMemberGuard phía API
- * (ghi chú trong apps/api/src/events/events.controller.ts). Frontend chỉ dùng để ẩn/hiện; API mới là nơi chặn thật.
+ * (apps/api/src/auth/event-access.ts). Frontend chỉ dùng để ẩn/hiện; API mới là nơi chặn thật.
  */
 export const EVENT_ROLE_CAPABILITIES: Record<EventMemberRole, readonly EventCapability[]> = {
   OWNER: ["viewMembers", "manageMembers", "manageContent", "manageResources", "viewDashboard", "useAi", "viewAudit", "checkIn"],

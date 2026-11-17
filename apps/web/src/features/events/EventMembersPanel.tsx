@@ -13,13 +13,14 @@ import {
 } from "@/types/eventMember";
 import { useEventAccess } from "./EventAccessProvider";
 
-/** Vai trò Chủ sự kiện có thể mời; Chủ sự kiện chỉ có qua việc tạo sự kiện. */
+/** Vai trò Chủ sự kiện có thể mời. Chủ sự kiện có được khi tạo sự kiện; riêng Quản trị viên gán thêm được (vd sự kiện cũ chưa có chủ). */
 const INVITABLE_ROLES: EventMemberRole[] = ["CO_ORGANIZER", "CHECKIN_STAFF"];
+const ADMIN_ROLES: EventMemberRole[] = ["OWNER", ...INVITABLE_ROLES];
 
 /**
  * Mục “Thành viên ban tổ chức” của một sự kiện.
  * Mọi thành viên xem được danh sách; chỉ Chủ sự kiện (và ADMIN) thêm / đổi vai trò / gỡ.
- * API dự kiến (BE chưa làm – xem apps/api/src/events/events.controller.ts):
+ * API (apps/api/src/events/events.controller.ts – EventMembersController):
  *   GET    /events/:eventId/members
  *   POST   /events/:eventId/members           { email, role }
  *   PATCH  /events/:eventId/members/:userId   { role }
@@ -29,6 +30,7 @@ export function EventMembersPanel({ eventId }: { eventId: string }) {
   const { user } = useAuth();
   const access = useEventAccess();
   const canManage = access.can(eventId, "manageMembers");
+  const addableRoles = user?.role === "ADMIN" ? ADMIN_ROLES : INVITABLE_ROLES;
   const path = `/events/${encodeURIComponent(eventId)}/members`;
 
   const event = useApi((signal) => api.get<EventSummary>(`/events/${encodeURIComponent(eventId)}`, { signal }), [eventId]);
@@ -99,7 +101,7 @@ export function EventMembersPanel({ eventId }: { eventId: string }) {
           <label className="field">
             <span>Vai trò</span>
             <select value={role} onChange={(e) => setRole(e.target.value as EventMemberRole)}>
-              {INVITABLE_ROLES.map((r) => (
+              {addableRoles.map((r) => (
                 <option key={r} value={r}>
                   {EVENT_MEMBER_ROLE_LABELS[r]}
                 </option>
@@ -124,7 +126,7 @@ export function EventMembersPanel({ eventId }: { eventId: string }) {
       )}
       {notReady ? (
         <p className="notice-warn" role="status">
-          API <code>{`GET /events/:eventId/members`}</code> chưa có (BE đang làm). Danh sách sẽ hiện khi API sẵn sàng.
+          API đang chạy chưa có <code>{`GET /events/:eventId/members`}</code> – cần cập nhật API và chạy migration mới.
         </p>
       ) : (
         members.error && (

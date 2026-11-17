@@ -9,7 +9,7 @@ import type { EventMemberRole, MyEventMembership } from "@/types/eventMember";
 type EventAccessValue = {
   /** "ready" khi đã biết danh sách sự kiện của người dùng (hoặc không cần biết: khách, người tham dự, ADMIN). */
   status: "loading" | "ready";
-  /** false khi API chưa có GET /me/event-memberships (404) → tạm thời không lọc, hiện banner cảnh báo. */
+  /** false khi API đang chạy là bản cũ, chưa có GET /me/event-memberships (404) → tạm không lọc, hiện banner. */
   supported: boolean;
   error: string;
   memberships: MyEventMembership[];
@@ -62,7 +62,7 @@ export function EventAccessProvider({ children }: { children: React.ReactNode })
 
   const value = useMemo<EventAccessValue>(() => {
     const byEvent = new Map(memberships.map((m) => [m.eventId, m.role]));
-    // API chưa hỗ trợ: coi Ban tổ chức như Chủ mọi sự kiện để giao diện vẫn dùng được trong lúc chờ BE.
+    // API bản cũ chưa hỗ trợ: coi Ban tổ chức như Chủ mọi sự kiện để giao diện vẫn dùng được (API vẫn tự chặn quyền).
     const fallback = isOrganizer && !supported;
     const roleOf = (eventId: string) => (fallback ? "OWNER" : byEvent.get(eventId));
     return {
@@ -100,8 +100,8 @@ export function EventAccessNotice() {
   if (supported) return null;
   return (
     <p className="notice-warn" role="status">
-      Chưa lọc theo sự kiện bạn tham gia: API <code>GET /me/event-memberships</code> chưa có (BE đang làm). Tạm thời hiển thị
-      mọi sự kiện.
+      Chưa lọc theo sự kiện bạn tham gia: API đang chạy chưa có <code>GET /me/event-memberships</code> (cần cập nhật API và chạy
+      migration mới). Tạm thời hiển thị mọi sự kiện.
     </p>
   );
 }

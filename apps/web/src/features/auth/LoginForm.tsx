@@ -17,7 +17,13 @@ function destinationFor(user: AuthUser, next: string | null) {
   return next && canAccess(user, next) ? next : homePathFor(user);
 }
 
-const DEMO_ACCOUNTS = ["admin@example.com", "organizer@example.com", "attendee@example.com"];
+const DEMO_ACCOUNTS = [
+  "admin@example.com",
+  "organizer@example.com",
+  "cohost@example.com",
+  "checkin@example.com",
+  "attendee@example.com",
+];
 
 export function LoginForm() {
   const { user, status, login } = useAuth();

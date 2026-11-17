@@ -36,8 +36,7 @@ const timeFormat = new Intl.DateTimeFormat("vi-VN", { timeStyle: "medium" });
 /**
  * Màn quét vé: chọn sự kiện → quét / nhập mã → hiện kết quả to, rõ.
  * Máy quét QR/NFC dạng bàn phím gõ mã rồi Enter, nên ô nhập luôn được focus lại sau mỗi lượt.
- * TODO(BE): POST /check-in và GET /check-in/events/:eventId/stats cần EventMemberGuard
- * (OWNER / CO_ORGANIZER / CHECKIN_STAFF của đúng eventId trong body/đường dẫn).
+ * API chỉ chấp nhận lượt quét từ thành viên ban tổ chức của đúng sự kiện (EventMemberGuard).
  */
 export function CheckInScreen() {
   const { user } = useAuth();

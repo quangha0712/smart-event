@@ -53,7 +53,7 @@ function useIntervalReload(reload: () => void, ms: number) {
 export function OrganizerHome() {
   const { user } = useAuth();
   const access = useEventAccess();
-  // TODO(BE): GET /events với Ban tổ chức chỉ trả sự kiện mình là thành viên; FE lọc thêm một lần cho chắc.
+  // API đã chỉ trả sự kiện mình là thành viên; FE lọc thêm theo /me/event-memberships cho chắc.
   const { data, error, loading } = useApi((signal) => api.get<EventSummary[]>("/events", { signal }));
   const now = Date.now();
   const events = access.filterEvents(data ?? []);

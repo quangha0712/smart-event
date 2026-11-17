@@ -21,10 +21,27 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const targets = [ctx.getHandler(), ctx.getClass()];
-    if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets)) return true;
-
     const req = ctx.switchToHttp().getRequest();
     const [scheme, token] = String(req.headers.authorization ?? "").split(" ");
+
+    if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, targets)) {
+      // Route công khai: không bắt buộc đăng nhập, nhưng có token hợp lệ thì gắn req.user để route trả dữ liệu theo người gọi
+      // (vd GET /events lọc theo sự kiện mình thuộc). Token sai/hết hạn thì coi như khách, không báo lỗi.
+      if (scheme === "Bearer" && token) {
+        try {
+          const payload = await this.jwt.verifyAsync<JwtPayload>(token);
+          req.user =
+            (await this.prisma.user.findUnique({
+              where: { id: payload.sub },
+              select: { id: true, email: true, fullName: true, role: true },
+            })) ?? undefined;
+        } catch {
+          req.user = undefined;
+        }
+      }
+      return true;
+    }
+
     if (scheme !== "Bearer" || !token) throw new UnauthorizedException("Cần đăng nhập");
 
     let payload: JwtPayload;

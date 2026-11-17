@@ -91,45 +91,38 @@ model User {
   operatedCheckIns    CheckInAttempt[]
   recordedExpenses    Expense[]
   approvedBudgetItems BudgetItem[]
+  createdEvents       Event[]          @relation("EventCreatedBy")
+  eventMemberships    EventMember[]    @relation("EventMemberUser")
+  invitedMembers      EventMember[]    @relation("EventMemberInvitedBy")
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 }
 
-// TODO(BE): Thành viên ban tổ chức theo sự kiện – FE đã làm xong giao diện, chờ BE thêm schema + migration.
-// Đề xuất (bỏ comment, thêm quan hệ ngược ở User/Event rồi chạy `npm run db:migrate -- --name event_members`):
-//
-// enum EventMemberRole {
-//   OWNER          // Chủ sự kiện: người tạo, toàn quyền, mời / đổi vai trò / gỡ thành viên
-//   CO_ORGANIZER   // Đồng tổ chức: nội dung, nguồn lực, ngân sách, check-in, AI, audit log
-//   CHECKIN_STAFF  // Nhân viên check-in: chỉ quét vé
-// }
-//
-// model EventMember {
-//   eventId     String
-//   userId      String
-//   role        EventMemberRole
-//   invitedById String?
-//   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-//   user        User     @relation("EventMemberUser", fields: [userId], references: [id], onDelete: Cascade)
-//   invitedBy   User?    @relation("EventMemberInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
-//   createdAt   DateTime @default(now())
-//
-//   @@id([eventId, userId])   // khoá chính kép: mỗi người có đúng một vai trò trong một sự kiện
-//   @@index([userId])         // tra nhanh "sự kiện của tôi"
-// }
-//
-// Thêm vào model Event:
-//   createdById String?                                   // nullable để migrate được dữ liệu cũ
-//   createdBy   User?          @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-//   members     EventMember[]
-//   @@index([createdById])
-// Thêm vào model User:
-//   createdEvents     Event[]       @relation("EventCreatedBy")
-//   eventMemberships  EventMember[] @relation("EventMemberUser")
-//   invitedMembers    EventMember[] @relation("EventMemberInvitedBy")
-//
-// Migration dữ liệu cũ: với mỗi Event chưa có thành viên, gán một ORGANIZER/ADMIN làm OWNER (hoặc để ADMIN tự gán);
-// seed: organizer@example.com là OWNER của demo-smart-event, thêm một tài khoản CHECKIN_STAFF để demo.
+/// Vai trò của một người trong MỘT sự kiện (khác quyền hệ thống UserRole).
+/// Ma trận quyền: apps/api/src/auth/event-access.ts (FE: apps/web/src/lib/eventPermissions.ts).
+enum EventMemberRole {
+  OWNER // Chủ sự kiện: người tạo, toàn quyền, mời / đổi vai trò / gỡ thành viên
+  CO_ORGANIZER // Đồng tổ chức: nội dung, nguồn lực, ngân sách, check-in, AI, audit log
+  CHECKIN_STAFF // Nhân viên check-in: chỉ quét vé
+}
+
+/// Thành viên ban tổ chức của một sự kiện. Mỗi người có đúng một vai trò trong một sự kiện.
+model EventMember {
+  eventId     String
+  userId      String
+  role        EventMemberRole
+  invitedById String?
+  event       Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User            @relation("EventMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy   User?           @relation("EventMemberInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@id([eventId, userId])
+  @@index([userId])
+  @@index([invitedById])
+}
+
 model Event {
   id               String            @id @default(cuid())
   name             String            @db.VarChar(191)
@@ -139,6 +132,10 @@ model Event {
   endsAt           DateTime
   capacity         Int?
   status           EventStatus       @default(DRAFT)
+  /// Người tạo sự kiện; null với dữ liệu cũ hoặc khi tài khoản người tạo bị xoá.
+  createdById      String?
+  createdBy        User?             @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  members          EventMember[]
   schedules        ScheduleItem[]
   registrations    Registration[]
   feedback         EventFeedback[]
@@ -154,6 +151,7 @@ model Event {
   updatedAt        DateTime          @updatedAt
 
   @@index([status, startsAt])
+  @@index([createdById])
 }
 
 model ScheduleItem {

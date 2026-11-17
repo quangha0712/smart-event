@@ -2,12 +2,13 @@ import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/com
 import { UserRole } from "@prisma/client";
 import { ApiTags } from "@nestjs/swagger";
 import { AuthUser, CurrentUser, Roles } from "../auth/auth.decorators";
+import { EVENT_ROLES, EventRoles } from "../auth/event-access";
 import { CheckInDto, CheckInStatsQuery } from "./check-in.dto";
 import { CheckInService } from "./check-in.service";
 
-// TODO(BE): thêm EventMemberGuard @EventRoles(OWNER, CO_ORGANIZER, CHECKIN_STAFF) – eventId lấy từ body (POST)
-// hoặc :eventId (stats). Hiện mọi ORGANIZER check-in được ở mọi sự kiện. (chi tiết guard + ma trận quyền: ghi chú đầu file src/events/events.controller.ts)
+/** Chỉ thành viên ban tổ chức của sự kiện (eventId trong body hoặc đường dẫn) được check-in / xem số liệu. */
 @Roles(UserRole.ORGANIZER)
+@EventRoles(EVENT_ROLES.ALL)
 @Controller("check-in")
 @ApiTags("Check-in")
 export class CheckInController {
