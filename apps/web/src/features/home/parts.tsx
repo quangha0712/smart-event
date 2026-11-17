@@ -72,7 +72,11 @@ export function EventRow({ event, actions, showStatus = false }: { event: EventS
       <DateBadge iso={event.startsAt} />
       <div className="event-row-main">
         <div className="event-row-title">
-          <h3>{event.name}</h3>
+          <h3>
+            <Link className="event-row-link" href={`/events/${encodeURIComponent(event.id)}`}>
+              {event.name}
+            </Link>
+          </h3>
           <TimePill startsAt={event.startsAt} endsAt={event.endsAt} />
           {showStatus && <StatusPill status={event.status} />}
         </div>

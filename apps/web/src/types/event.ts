@@ -29,3 +29,28 @@ export type CheckInStats = {
   notEligible: number;
   windowMinutes: number;
 };
+
+export type Speaker = {
+  id: string;
+  fullName: string;
+  title: string | null;
+  organization: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+};
+
+export type ScheduleItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  room: string | null;
+  speakers: Speaker[];
+};
+
+/** GET /events/:id – bản nháp chỉ trả cho ban tổ chức của sự kiện và ADMIN. */
+export type EventDetail = EventSummary & {
+  schedules: ScheduleItem[];
+  speakers: Speaker[];
+};

@@ -323,3 +323,43 @@ a.compact-item:hover { border-color: var(--primary); }
 
 /* Tiêu đề trang kèm nút hành động bên phải (vd "Sự kiện" + "Tạo sự kiện"). */
 .page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Chi tiết sự kiện ---------- */
+.event-row-link { color: inherit; text-decoration: none; }
+.event-row-link:hover, .event-row-link:focus-visible { color: var(--primary); text-decoration: underline; }
+.event-detail { display: flex; flex-direction: column; gap: 16px; }
+.back-link { font-size: 14px; font-weight: 600; text-decoration: none; width: fit-content; }
+.detail-header { display: flex; gap: 16px; align-items: flex-start; }
+.detail-heading { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.detail-heading .page-title { overflow-wrap: anywhere; }
+.detail-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.detail-main { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.detail-main h2 { font-size: 18px; margin: 0 0 12px; }
+.detail-description { margin: 0; white-space: pre-line; line-height: 1.7; overflow-wrap: anywhere; }
+.detail-panel {
+  position: sticky; top: 80px; display: flex; flex-direction: column; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+}
+.detail-panel h2 { margin: 0; font-size: 16px; }
+.detail-links { display: flex; flex-direction: column; gap: 8px; }
+.detail-links .button { justify-content: flex-start; }
+.schedule-day + .schedule-day { margin-top: 16px; }
+.schedule-day-title { font-size: 15px; margin: 0 0 8px; color: var(--muted); }
+.schedule-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.schedule-item { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.schedule-item:last-child { border-bottom: 0; }
+.schedule-time { display: flex; flex-direction: column; font-weight: 700; font-variant-numeric: tabular-nums; }
+.schedule-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.schedule-body p { margin: 0; }
+.schedule-speakers { color: var(--primary); font-weight: 600; }
+.speaker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.speaker-card { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.speaker-card > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.speaker-card p { margin: 4px 0 0; }
+.speaker-photo { border-radius: 50%; object-fit: cover; flex: none; }
+.speaker-initials { font-size: 16px; }
+@media (max-width: 860px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-panel { position: static; order: -1; }
+}
