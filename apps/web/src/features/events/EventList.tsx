@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { OrganizerEventActions } from "@/features/home/OrganizerHome";
 import { EventRow, Empty } from "@/features/home/parts";
+import { EventAccessNotice, useEventAccess } from "./EventAccessProvider";
 import { api, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import type { EventSummary, MyRegistration } from "@/types/event";
@@ -15,7 +17,11 @@ export function EventList() {
   const { user, hasRole } = useAuth();
   const isOrganizer = hasRole("ORGANIZER");
   const isAttendee = user?.role === "ATTENDEE";
-  const events = useApi((signal) => api.get<EventSummary[]>("/events", { auth: false, signal }));
+  const access = useEventAccess();
+  // Gửi kèm token khi đã đăng nhập để API lọc theo người gọi.
+  // TODO(BE): GET /events đang @Public – cần đọc token nếu có: Ban tổ chức chỉ nhận sự kiện mình là thành viên (kèm myRole),
+  // ADMIN nhận tất cả, khách/người tham dự chỉ nhận sự kiện PUBLISHED.
+  const events = useApi((signal) => api.get<EventSummary[]>("/events", { auth: Boolean(user), signal }), [user?.id]);
   const mine = useApi(isAttendee ? (signal) => api.get<MyRegistration[]>("/me/registrations", { signal }) : null, [isAttendee]);
   const [filter, setFilter] = useState<Filter>("upcoming");
   const [query, setQuery] = useState("");
@@ -24,7 +30,7 @@ export function EventList() {
 
   const now = Date.now();
   const registered = new Map((mine.data ?? []).filter((r) => r.status === "CONFIRMED").map((r) => [r.event.id, r]));
-  const list = (events.data ?? [])
+  const list = access.filterEvents(events.data ?? [])
     .filter((e) => isOrganizer || e.status !== "DRAFT")
     .filter((e) => (filter === "all" ? true : filter === "upcoming" ? new Date(e.endsAt).getTime() >= now : new Date(e.endsAt).getTime() < now))
     .filter((e) => !query.trim() || `${e.name} ${e.location ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
@@ -48,8 +54,10 @@ export function EventList() {
     if (isOrganizer) {
       return (
         <>
-          <Link className="button button-ghost" href={`/dashboard?eventId=${encodeURIComponent(e.id)}`}>Số liệu</Link>
-          <Link className="button button-ghost" href={`/events/${encodeURIComponent(e.id)}/ai-insights`}>Phân tích AI</Link>
+          <OrganizerEventActions eventId={e.id} />
+          {access.can(e.id, "useAi") && (
+            <Link className="button button-ghost" href={`/events/${encodeURIComponent(e.id)}/ai-insights`}>Phân tích AI</Link>
+          )}
         </>
       );
     }
@@ -79,10 +87,13 @@ export function EventList() {
         </div>
         <input className="search" type="search" placeholder="Tìm theo tên hoặc địa điểm…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Tìm sự kiện" />
       </div>
+      {isOrganizer && <EventAccessNotice />}
       {message && <p className={message.ok ? "notice-ok" : "form-error"} role="status">{message.text}</p>}
       {events.error && <p className="form-error" role="alert">{events.error}</p>}
       {events.loading && <div className="skeleton-list" aria-busy="true" />}
-      {!events.loading && !events.error && list.length === 0 && <Empty title="Không có sự kiện phù hợp." />}
+      {!events.loading && !events.error && list.length === 0 && (
+        <Empty title={isOrganizer && access.supported && user?.role === "ORGANIZER" ? "Bạn chưa thuộc sự kiện nào phù hợp." : "Không có sự kiện phù hợp."} />
+      )}
       <div className="event-list">
         {list.map((e) => (
           <EventRow key={e.id} event={e} showStatus={isOrganizer} actions={actions(e)} />

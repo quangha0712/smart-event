@@ -3,6 +3,9 @@ import { ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "../prisma/prisma.module";
 import { AuditLogService } from "./audit-log.service";
 
+// TODO(BE) – BẢO MẬT: controller này chưa có @Roles nên MỌI tài khoản đã đăng nhập (kể cả ATTENDEE) đều đọc được
+// audit log của bất kỳ sự kiện nào. Cần thêm @Roles(UserRole.ORGANIZER) + EventMemberGuard @EventRoles(OWNER, CO_ORGANIZER)
+// với eventId lấy từ query. (chi tiết guard + ma trận quyền: ghi chú đầu file src/events/events.controller.ts)
 @Controller("audit-logs")
 @ApiTags("Audit logs")
 export class AuditLogController {

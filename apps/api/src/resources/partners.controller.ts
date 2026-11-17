@@ -4,6 +4,13 @@ import { Roles } from "../auth/auth.decorators";
 import { PrismaService } from "../prisma/prisma.module";
 import { CreateSponsorDto, CreateVendorDto, UpdateSponsorDto, UpdateVendorDto } from "./dto/partner.dto";
 
+/*
+ * TODO(BE): giới hạn theo thành viên sự kiện – EventMemberGuard @EventRoles(OWNER, CO_ORGANIZER).
+ *  - Route có eventId (query/body/:eventId): kiểm tra trực tiếp. Route theo :id bản ghi: tra eventId của bản ghi rồi kiểm tra.
+ *  - GET danh sách không truyền eventId: ORGANIZER chỉ nhận bản ghi thuộc sự kiện mình là thành viên (ADMIN: tất cả).
+ *  - /resources/staff và /resources/vendors là danh bạ dùng chung (không có eventId) → giữ @Roles(ORGANIZER).
+ *  (chi tiết guard + ma trận quyền: ghi chú đầu file src/events/events.controller.ts)
+ */
 @Roles(UserRole.ORGANIZER)
 @Controller("resources/vendors")
 export class VendorsController {

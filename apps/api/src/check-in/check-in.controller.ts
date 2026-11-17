@@ -5,6 +5,8 @@ import { AuthUser, CurrentUser, Roles } from "../auth/auth.decorators";
 import { CheckInDto, CheckInStatsQuery } from "./check-in.dto";
 import { CheckInService } from "./check-in.service";
 
+// TODO(BE): thêm EventMemberGuard @EventRoles(OWNER, CO_ORGANIZER, CHECKIN_STAFF) – eventId lấy từ body (POST)
+// hoặc :eventId (stats). Hiện mọi ORGANIZER check-in được ở mọi sự kiện. (chi tiết guard + ma trận quyền: ghi chú đầu file src/events/events.controller.ts)
 @Roles(UserRole.ORGANIZER)
 @Controller("check-in")
 @ApiTags("Check-in")

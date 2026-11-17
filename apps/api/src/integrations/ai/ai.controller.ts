@@ -13,6 +13,9 @@ import {
   RequirementsDraftInput,
 } from "./ai.types";
 
+// TODO(BE): endpoint AI theo sự kiện (/ai/events/:eventId/..., check-in-analysis có eventId trong body) cần
+// EventMemberGuard @EventRoles(OWNER, CO_ORGANIZER). Endpoint không gắn sự kiện (project-summary, requirements-draft,
+// budget-estimate) giữ @Roles(ORGANIZER). (chi tiết guard + ma trận quyền: ghi chú đầu file src/events/events.controller.ts)
 @Roles(UserRole.ORGANIZER)
 @Controller("ai")
 @ApiTags("AI")

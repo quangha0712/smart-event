@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useEventAccess } from "@/features/events/EventAccessProvider";
 import { visibleNavItems } from "@/lib/navigation";
 import { UserMenu } from "./UserMenu";
 
@@ -10,7 +11,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, status } = useAuth();
   const pathname = usePathname();
 
-  const items = visibleNavItems(user);
+  const access = useEventAccess();
+  const items = visibleNavItems(user, access);
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
 
   return (
