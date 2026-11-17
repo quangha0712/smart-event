@@ -21,10 +21,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="shell">
+      <a className="skip-link" href="#main-content">Chuyển đến nội dung chính</a>
       <header className="topbar">
         <div className="topbar-inner">
           <Link href="/" className="brand">
-            Smart Event
+            <span className="brand-mark" aria-hidden="true">S</span>
+            <span>Smart Event</span>
           </Link>
           <nav aria-label="Menu chính" className="nav">
             {items.map((item) => (
@@ -59,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="content">{children}</main>
+      <main id="main-content" className="content" tabIndex={-1}>{children}</main>
     </div>
   );
 }

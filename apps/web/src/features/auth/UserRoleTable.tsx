@@ -38,7 +38,7 @@ export function UserRoleTable() {
     }
   }
 
-  if (!users && !error) return <div className="state">Đang tải…</div>;
+  if (!users && !error) return <div className="state" role="status">Đang tải…</div>;
 
   return (
     <>

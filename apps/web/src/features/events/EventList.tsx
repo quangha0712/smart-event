@@ -36,7 +36,7 @@ export function EventList() {
   }, []);
 
   if (error) return <p className="form-error" role="alert">{error}</p>;
-  if (!events) return <div className="state">Đang tải…</div>;
+  if (!events) return <div className="state" role="status">Đang tải…</div>;
   if (events.length === 0) return <div className="placeholder">Chưa có sự kiện nào.</div>;
 
   return (
