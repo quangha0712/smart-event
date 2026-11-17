@@ -38,3 +38,22 @@ export class UpdateRoleDto {
   @IsEnum(UserRole, { message: "Quyền phải là ADMIN, ORGANIZER hoặc ATTENDEE" })
   role!: UserRole;
 }
+
+export class UpdateProfileDto {
+  @IsString()
+  @IsNotEmpty({ message: "Cần nhập họ tên" })
+  @MaxLength(191, { message: "Họ tên tối đa 191 ký tự" })
+  fullName!: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  @IsNotEmpty({ message: "Cần nhập mật khẩu hiện tại" })
+  @MaxLength(72)
+  currentPassword!: string;
+
+  @IsString()
+  @MinLength(8, { message: "Mật khẩu mới tối thiểu 8 ký tự" })
+  @MaxLength(72, { message: "Mật khẩu mới tối đa 72 ký tự" })
+  newPassword!: string;
+}

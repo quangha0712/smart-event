@@ -5,12 +5,15 @@ export type NavItem = {
   label: string;
   /** undefined = ai cũng thấy (kể cả chưa đăng nhập); [] = mọi người đã đăng nhập; ADMIN thấy tất cả. */
   roles?: UserRole[];
+  /** Chỉ đúng các vai trò này mới thấy (không áp dụng quy tắc ADMIN thấy tất cả). */
+  only?: UserRole[];
 };
 
 /** Menu chính. Thêm trang mới ở đây và bọc trang bằng <RequireAuth roles={...}> cùng quyền. */
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Trang chủ" },
   { href: "/events", label: "Sự kiện" },
+  { href: "/my-tickets", label: "Vé của tôi", roles: [], only: ["ATTENDEE"] },
   { href: "/dashboard", label: "Dashboard", roles: ["ORGANIZER"] },
   { href: "/check-in", label: "Check-in", roles: ["ORGANIZER"] },
   { href: "/resources", label: "Nguồn lực", roles: ["ORGANIZER"] },
@@ -20,8 +23,19 @@ export const NAV_ITEMS: NavItem[] = [
 /** Trang cần quyền nhưng không nằm trên menu. Giữ khớp với <RequireAuth> của từng trang. */
 const EXTRA_PROTECTED: Array<{ pattern: RegExp; roles: UserRole[] }> = [
   { pattern: /^\/admin(\/|$)/, roles: ["ADMIN"] },
+  { pattern: /^\/account(\/|$)/, roles: [] },
   { pattern: /^\/events\/[^/]+\/ai-insights(\/|$)/, roles: ["ORGANIZER"] },
 ];
+
+/** Mục menu hiển thị cho người dùng hiện tại. */
+export function visibleNavItems(user: AuthUser | null) {
+  return NAV_ITEMS.filter((item) => {
+    if (item.only) return Boolean(user && item.only.includes(user.role));
+    if (item.roles === undefined) return true;
+    if (!user) return false;
+    return item.roles.length === 0 || user.role === "ADMIN" || item.roles.includes(user.role);
+  });
+}
 
 /** Trang mặc định sau khi đăng nhập. */
 export const HOME_PATH = "/";

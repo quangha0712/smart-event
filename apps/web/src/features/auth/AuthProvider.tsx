@@ -15,6 +15,8 @@ type AuthContextValue = {
   signedOut: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  /** Cập nhật thông tin người dùng trong phiên sau khi sửa hồ sơ. */
+  updateUser: (user: AuthUser) => void;
   /** ADMIN luôn được tính là có quyền. */
   hasRole: (...roles: UserRole[]) => boolean;
 };
@@ -91,9 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus("anonymous");
   }, []);
 
+  const updateUser = useCallback((next: AuthUser) => {
+    saveUser(next);
+    setUser(next);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, signedOut, login, logout, hasRole: (...roles) => hasRole(user, roles) }),
-    [user, status, signedOut, login, logout],
+    () => ({ user, status, signedOut, login, logout, updateUser, hasRole: (...roles) => hasRole(user, roles) }),
+    [user, status, signedOut, login, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
