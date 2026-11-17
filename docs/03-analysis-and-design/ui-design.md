@@ -1,6 +1,6 @@
 # Thiết kế giao diện
 
-- Link Figma: bổ sung sau.
+- Thiết kế tham chiếu hiện tại: [trang chủ](../../apps/web/src/app/page.tsx) và [CSS chung](../../apps/web/src/app/globals.css); chưa có Figma.
 - Màn hình: đăng nhập, danh sách/chi tiết sự kiện, đăng ký, vé QR, check-in, dashboard, đánh giá và quản trị.
 - Frontend khởi tạo tại `apps/web`.
 
@@ -20,7 +20,7 @@
 - Font Aptos/Segoe UI với dự phòng sans-serif, dùng cùng một họ chữ với kích thước và độ đậm phân cấp. Trang chủ giới thiệu quy trình sự kiện và vai trò người dùng; menu hiển thị theo quyền đã có.
 - Hover/focus và phản hồi thao tác dùng chuyển động ngắn, không chặn thao tác; tắt gần như hoàn toàn khi bật `prefers-reduced-motion`.
 - Menu cuộn ngang trên màn hình nhỏ; phần giới thiệu và nội dung theo vai trò tự chuyển thành một cột khi cần. Bảng dữ liệu có vùng cuộn ngang riêng.
-- Loading, dữ liệu rỗng và lỗi phải có nội dung rõ ràng; trạng thái thành công dùng kiểu chung khi có thao tác cần thông báo.
+- Loading, dữ liệu rỗng và lỗi phải có nội dung rõ ràng; đổi quyền thành công có thông báo dùng kiểu chung và `role="status"`.
 
 ## Tiêu chí review
 

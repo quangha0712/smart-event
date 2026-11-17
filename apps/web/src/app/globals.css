@@ -59,6 +59,7 @@ code { color: var(--text); overflow-wrap: anywhere; }
 }
 .nav-link:hover { background: var(--surface-soft); color: var(--text); }
 .nav-link.active { background: var(--primary-soft); color: #1d4ed8; }
+.nav-link:focus-visible { outline-offset: -2px; }
 .account { display: flex; align-items: center; gap: 12px; margin-left: auto; min-width: 0; }
 .account-name { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .role-badge {
