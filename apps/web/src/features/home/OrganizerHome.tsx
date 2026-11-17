@@ -129,7 +129,7 @@ export function OrganizerEventActions({ eventId }: { eventId: string }) {
       {role && access.supported && <span className="pill">{EVENT_MEMBER_ROLE_LABELS[role]}</span>}
       {access.can(eventId, "manageContent") && <Link className="button button-ghost" href={`/events/${id}/edit`}>Sửa</Link>}
       {access.can(eventId, "viewDashboard") && <Link className="button button-ghost" href={`/dashboard?eventId=${id}`}>Số liệu</Link>}
-      {access.can(eventId, "manageResources") && <Link className="button button-ghost" href={`/resources?eventId=${id}`}>Ngân sách</Link>}
+      {access.can(eventId, "manageResources") && <Link className="button button-ghost" href={`/resources?eventId=${id}&tab=budget`}>Ngân sách</Link>}
       {access.can(eventId, "checkIn") && <Link className="button button-ghost" href={`/check-in?eventId=${id}`}>Check-in</Link>}
       {access.can(eventId, "viewMembers") && <Link className="button button-ghost" href={`/events/${id}/members`}>Thành viên</Link>}
     </>

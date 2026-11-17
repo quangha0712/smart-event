@@ -1,6 +1,7 @@
 /** Khung tạm cho trang đã có route + phân quyền nhưng chưa làm nội dung. */
-export function PagePlaceholder({ eyebrow, title, description, feature }: {
-  eyebrow: string;
+export function PagePlaceholder({ title, description, feature }: {
+  /** Không còn hiển thị (menu đã cho biết đang ở mục nào); giữ để khỏi sửa nơi gọi. */
+  eyebrow?: string;
   title: string;
   description: string;
   /** Thư mục feature sẽ chứa giao diện, ví dụ "check-in". */
@@ -8,7 +9,6 @@ export function PagePlaceholder({ eyebrow, title, description, feature }: {
 }) {
   return (
     <section className="page-section">
-      <span className="eyebrow">{eyebrow}</span>
       <h1 className="page-title">{title}</h1>
       <p className="muted">{description}</p>
       <div className="placeholder">

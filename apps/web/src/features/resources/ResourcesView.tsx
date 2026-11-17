@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo } from "react";
+import { BackToEvent } from "@/components/BackToEvent";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { EventAccessNotice, useEventAccess } from "@/features/events/EventAccessProvider";
 import { api } from "@/lib/api";
@@ -63,7 +63,7 @@ export function ResourcesView() {
 
   return (
     <section className="page-section">
-      <span className="eyebrow">NGUỒN LỰC</span>
+      {selected && <BackToEvent eventId={selected.id} name={selected.name} />}
       <h1 className="page-title">Nguồn lực & ngân sách</h1>
       <EventAccessNotice />
 
@@ -87,9 +87,6 @@ export function ResourcesView() {
                 ))}
               </select>
             </label>
-            <Link className="button button-ghost" href={`/events/${encodeURIComponent(eventId)}`}>
-              Xem sự kiện
-            </Link>
           </div>
 
           <div className="tabs" role="tablist" aria-label="Nguồn lực">

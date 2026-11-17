@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { BackToEvent } from "@/components/BackToEvent";
 import { api, ApiError } from "@/lib/api";
 import type { EventDetail, EventSummary } from "@/types/event";
 import { useEventAccess } from "./EventAccessProvider";
@@ -149,7 +150,7 @@ export function CreateEventForm({ event }: { event?: EventDetail } = {}) {
 
   return (
     <section className="page-section">
-      <span className="eyebrow">SỰ KIỆN</span>
+      {event && <BackToEvent eventId={event.id} name={event.name} />}
       <h1 className="page-title">{isEdit ? "Sửa thông tin sự kiện" : "Tạo sự kiện"}</h1>
       {isEdit ? (
         <p className="muted">

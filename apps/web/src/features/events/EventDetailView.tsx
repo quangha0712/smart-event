@@ -77,7 +77,9 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
       { show: editable && access.can(event.id, "manageContent"), href: `/events/${id}/edit`, label: "Sửa thông tin sự kiện" },
       { show: access.can(event.id, "viewMembers"), href: `/events/${id}/members`, label: "Thành viên ban tổ chức" },
       { show: access.can(event.id, "viewDashboard"), href: `/dashboard?eventId=${id}`, label: "Số liệu" },
-      { show: access.can(event.id, "manageResources"), href: `/resources?eventId=${id}`, label: "Nguồn lực & ngân sách" },
+      { show: access.can(event.id, "manageResources"), href: `/resources?eventId=${id}&tab=staff`, label: "Nhân sự & phân ca" },
+      { show: access.can(event.id, "manageResources"), href: `/resources?eventId=${id}&tab=budget`, label: "Dự toán – thực chi" },
+      { show: access.can(event.id, "manageResources"), href: `/resources?eventId=${id}&tab=sponsors`, label: "Tài trợ & nhà cung cấp" },
       { show: access.can(event.id, "checkIn"), href: `/check-in?eventId=${id}`, label: "Check-in" },
       { show: access.can(event.id, "useAi"), href: `/events/${id}/ai-insights`, label: "Phân tích AI" },
     ].filter((l) => l.show);

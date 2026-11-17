@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { BackToEvent } from "@/components/BackToEvent";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { EventAccessNotice, useEventAccess } from "@/features/events/EventAccessProvider";
 import { api, ApiError } from "@/lib/api";
@@ -101,7 +102,7 @@ export function CheckInScreen() {
 
   return (
     <section className="page-section checkin">
-      <span className="eyebrow">CHECK-IN</span>
+      {params.get("eventId") && selected && <BackToEvent eventId={selected.id} name={selected.name} />}
       <h1 className="page-title">Quét vé</h1>
       <EventAccessNotice />
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { BackToEvent } from "@/components/BackToEvent";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { api, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
@@ -80,7 +81,7 @@ export function EventMembersPanel({ eventId, justCreated = false }: { eventId: s
 
   return (
     <section className="page-section">
-      <span className="eyebrow">BAN TỔ CHỨC</span>
+      <BackToEvent eventId={eventId} name={event.data?.name} />
       <h1 className="page-title">Thành viên ban tổ chức</h1>
       <p className="muted">{event.data ? event.data.name : event.loading ? "Đang tải sự kiện…" : ""}</p>
       {justCreated && (
