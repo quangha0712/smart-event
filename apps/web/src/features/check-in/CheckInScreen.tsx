@@ -11,7 +11,11 @@ import type { EventSummary } from "@/types/event";
 import { EVENT_MEMBER_ROLE_LABELS } from "@/types/eventMember";
 import { CameraScanner, type CameraFeedback } from "./CameraScanner";
 
-type CheckInResult = "ACCEPTED" | "DUPLICATE" | "INVALID_CODE" | "WRONG_EVENT" | "NOT_ELIGIBLE";
+type CheckInResult = "ACCEPTED" | "DUPLICATE" | "INVALID_CODE" | "WRONG_EVENT" | "NOT_ELIGIBLE" | "OUT_OF_HOURS";
+
+/** Giữ khớp với CHECKIN_OPEN_BEFORE_MINUTES phía API (mặc định 120): cổng mở trước giờ bắt đầu bấy nhiêu phút. */
+const CHECKIN_OPEN_BEFORE_MINUTES = 120;
+const windowFmt = new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
 type Method = "QR" | "NFC";
 
 /** Phản hồi của POST /check-in (luôn 200, xem `result`). */
@@ -29,6 +33,7 @@ const TONE: Record<CheckInResult, "ok" | "warn" | "bad"> = {
   ACCEPTED: "ok",
   DUPLICATE: "warn",
   NOT_ELIGIBLE: "warn",
+  OUT_OF_HOURS: "warn",
   INVALID_CODE: "bad",
   WRONG_EVENT: "bad",
 };
@@ -78,6 +83,21 @@ export function CheckInScreen() {
   const [log, setLog] = useState<ScanLog[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const seq = useRef(0);
+  /** Đồng hồ cập nhật mỗi 30 giây để tự khoá / mở khoá khi tới giờ mở cổng hoặc khi sự kiện kết thúc. */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  /** Ref song song với trạng thái "ngoài giờ" để submitCode (gọi từ camera / máy quét) đọc được giá trị mới nhất. */
+  const closedRef = useRef(false);
+
+  // Đổi sự kiện thì bỏ kết quả quét của sự kiện trước, tránh hiểu nhầm.
+  useEffect(() => {
+    setLog([]);
+    setError("");
+    setCameraFeedback(null);
+  }, [eventId]);
 
   useEffect(() => {
     // Đang dùng camera thì không giành focus (trên điện thoại sẽ bật bàn phím che camera).
@@ -92,7 +112,7 @@ export function CheckInScreen() {
   /** Gửi một lượt quét – dùng chung cho ô nhập / máy quét bàn phím và camera. */
   async function submitCode(raw: string, scanMethod: Method) {
     const value = raw.trim();
-    if (!value || !eventId || busyRef.current) return;
+    if (!value || !eventId || busyRef.current || closedRef.current) return;
     busyRef.current = true;
     setBusy(true);
     setError("");
@@ -126,6 +146,25 @@ export function CheckInScreen() {
   const latest = log[0];
   const selected = options.find((e) => e.id === eventId);
   const myRole = selected ? access.roleOf(selected.id) : undefined;
+  // Báo trước khi sự kiện đang ngoài giờ check-in (API vẫn là nơi quyết định).
+  const opensAt = selected ? new Date(new Date(selected.startsAt).getTime() - CHECKIN_OPEN_BEFORE_MINUTES * 60_000) : null;
+  const closesAt = selected ? new Date(selected.endsAt) : null;
+  const nowMs = now;
+  const outOfHours =
+    opensAt && closesAt
+      ? nowMs < opensAt.getTime()
+        ? `Chưa tới giờ check-in. Cổng mở lúc ${windowFmt.format(opensAt)} (trước giờ bắt đầu ${CHECKIN_OPEN_BEFORE_MINUTES / 60} tiếng) – tạm khoá quét vé.`
+        : nowMs > closesAt.getTime()
+          ? `Sự kiện đã kết thúc lúc ${windowFmt.format(closesAt)} – không nhận check-in nữa.`
+          : null
+      : null;
+  const closed = Boolean(outOfHours);
+  closedRef.current = closed;
+
+  // Ngoài giờ thì tắt camera đang bật.
+  useEffect(() => {
+    if (closed) setCamera(false);
+  }, [closed]);
 
   return (
     <section className="page-section checkin">
@@ -173,6 +212,11 @@ export function CheckInScreen() {
               </div>
             </div>
           </div>
+          {outOfHours && (
+            <p className="notice-warn" role="status">
+              {outOfHours}
+            </p>
+          )}
           {myRole && access.supported && (
             <p className="muted small">
               Vai trò của bạn ở sự kiện này: <strong>{EVENT_MEMBER_ROLE_LABELS[myRole]}</strong>
@@ -181,12 +225,18 @@ export function CheckInScreen() {
 
           {method === "QR" && (
             <div className="camera-toggle">
-              <button type="button" className={camera ? "button button-ghost" : "button"} onClick={() => setCamera((v) => !v)}>
+              <button
+                type="button"
+                className={camera ? "button button-ghost" : "button"}
+                onClick={() => setCamera((v) => !v)}
+                disabled={closed}
+                title={closed ? "Ngoài giờ check-in" : undefined}
+              >
                 {camera ? "Tắt camera" : "Quét bằng camera"}
               </button>
             </div>
           )}
-          {camera && method === "QR" && <CameraScanner paused={busy} feedback={cameraFeedback} onDetect={(value) => submitCode(value, "QR")} />}
+          {camera && method === "QR" && !closed && <CameraScanner paused={busy} feedback={cameraFeedback} onDetect={(value) => submitCode(value, "QR")} />}
 
           <form className="scan-form" onSubmit={handleSubmit}>
             <label className="field scan-field">
@@ -198,16 +248,19 @@ export function CheckInScreen() {
                 autoComplete="off"
                 autoCapitalize="off"
                 spellCheck={false}
-                placeholder={method === "QR" ? "SE1.xxxx.xxxx" : "04A1B2C3D4E5F6"}
+                placeholder={closed ? "Ngoài giờ check-in" : method === "QR" ? "SE1.xxxx.xxxx" : "04A1B2C3D4E5F6"}
                 aria-describedby="scan-hint"
+                disabled={closed}
               />
             </label>
-            <button type="submit" className="button" disabled={busy || !code.trim() || !eventId}>
+            <button type="submit" className="button" disabled={closed || busy || !code.trim() || !eventId}>
               {busy ? "Đang kiểm tra…" : "Check-in"}
             </button>
           </form>
           <p id="scan-hint" className="muted small">
-            Máy quét dạng bàn phím tự gửi sau khi đọc mã (phím Enter).
+            {closed
+              ? "Đang ngoài giờ check-in – ô nhập mã và camera tạm khoá, tự mở lại khi tới giờ."
+              : "Máy quét dạng bàn phím tự gửi sau khi đọc mã (phím Enter)."}
           </p>
 
           {error && <p className="form-error" role="alert">{error}</p>}

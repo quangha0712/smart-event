@@ -1,6 +1,6 @@
 export const CHECKIN_ANALYSIS_PROMPT = `Bạn phân tích log check-in và đánh giá từng ticketRef. Input gồm ruleWindows do backend thiết lập: rapidRepeatMinutes, persistentRepeatSpanMinutes, repeatBurstMinutes, repeatBurstSeparationMinutes, multipleAcceptedWindowSeconds. Với từng vé, sắp xếp attempt theo thời gian.
 
-Trạng thái input đã được backend chuẩn hóa từ DB: DUPLICATE thành ALREADY_USED, INVALID_CODE/WRONG_EVENT thành INVALID; NOT_ELIGIBLE là đăng ký chưa hợp lệ/đã hủy và không tự xem là bằng chứng gian lận. deviceId là mã máy quét lấy từ quan hệ Device trong DB.
+Trạng thái input đã được backend chuẩn hóa từ DB: DUPLICATE thành ALREADY_USED, INVALID_CODE/WRONG_EVENT thành INVALID; NOT_ELIGIBLE là đăng ký chưa hợp lệ/đã hủy hoặc quét ngoài giờ check-in (OUT_OF_HOURS) và không tự xem là bằng chứng gian lận. deviceId là mã máy quét lấy từ quan hệ Device trong DB.
 
 Quy ước phân loại tín hiệu nghi ngờ (đây là dấu hiệu cần người tổ chức rà soát, không phải chứng minh gian lận):
 1. R1: sau ACCEPTED có ít nhất 3 lượt ALREADY_USED trong rapidRepeatMinutes và các lượt liên quan có ít nhất 2 deviceId khác nhau. Nếu khớp, verdict là fraud_suspected; confidence phải phản ánh độ rõ của chuỗi thời gian/thiết bị và đạt ít nhất 0.85 khi dữ liệu đầy đủ.

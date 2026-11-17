@@ -17,7 +17,7 @@ type Dashboard = {
   registrations: { confirmed: number; pending: number; cancelled: number; checkedIn: number; byDay: Array<{ date: string; count: number }> };
   checkIn: {
     totalAttempts: number;
-    byResult: Record<"ACCEPTED" | "DUPLICATE" | "INVALID_CODE" | "WRONG_EVENT" | "NOT_ELIGIBLE", number>;
+    byResult: Record<"ACCEPTED" | "DUPLICATE" | "INVALID_CODE" | "WRONG_EVENT" | "NOT_ELIGIBLE" | "OUT_OF_HOURS", number>;
     bucketMinutes: number;
     buckets: Array<{ start: string; accepted: number; rejected: number }>;
   };
@@ -39,6 +39,7 @@ const RESULT_LABELS: Record<keyof Dashboard["checkIn"]["byResult"], string> = {
   INVALID_CODE: "Mã sai",
   WRONG_EVENT: "Sai sự kiện",
   NOT_ELIGIBLE: "Chưa xác nhận / đã huỷ",
+  OUT_OF_HOURS: "Ngoài giờ check-in",
 };
 
 /** "16/11" – ngày/tháng ngắn cho trục và bảng. */

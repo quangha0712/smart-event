@@ -44,6 +44,7 @@ enum CheckInResult {
   INVALID_CODE // không tìm thấy vé ứng với mã quét
   WRONG_EVENT // vé thuộc sự kiện khác
   NOT_ELIGIBLE // đăng ký bị huỷ hoặc chưa xác nhận
+  OUT_OF_HOURS // ngoài giờ check-in (trước giờ mở cổng hoặc sau khi sự kiện kết thúc)
 }
 
 enum DeviceType {

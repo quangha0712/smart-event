@@ -522,3 +522,4 @@ a.compact-item:hover { border-color: var(--primary); }
 .camera-result-detail { font-size: 16px; font-weight: 600; opacity: .95; }
 @keyframes camera-result-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .camera-result { animation: none; } }
+.field input:disabled, .field textarea:disabled, select:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
