@@ -2,8 +2,9 @@ import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patc
 import { UserRole } from "@prisma/client";
 import { ApiTags } from "@nestjs/swagger";
 import { AuthUser, CurrentUser, Public, Roles } from "../auth/auth.decorators";
-import { EVENT_ROLES, EventRoles } from "../auth/event-access";
+import { EVENT_ROLES, EventAccessService, EventRoles } from "../auth/event-access";
 import { CreateEventDto } from "./dto/create-event.dto";
+import { UpdateEventDto, UpdateEventStatusDto } from "./dto/update-event.dto";
 import { AddEventMemberDto, UpdateEventMemberDto } from "./event-members.dto";
 import { EventMembersService } from "./event-members.service";
 import { EventsService } from "./events.service";
@@ -15,7 +16,10 @@ import { EventsService } from "./events.service";
 @Controller("events")
 @ApiTags("Events")
 export class EventsController {
-  constructor(private readonly events: EventsService) {}
+  constructor(
+    private readonly events: EventsService,
+    private readonly access: EventAccessService,
+  ) {}
 
   /** ADMIN: tất cả; Ban tổ chức: sự kiện mình là thành viên (+ myRole); khách / người tham dự: trừ bản nháp. */
   @Public()
@@ -37,6 +41,23 @@ export class EventsController {
   @Post()
   create(@Body() input: CreateEventDto, @CurrentUser() user: AuthUser) {
     return this.events.create(input, user);
+  }
+
+  /** Sửa thông tin: Chủ sự kiện / Đồng tổ chức. */
+  @Roles(UserRole.ORGANIZER)
+  @EventRoles(EVENT_ROLES.MANAGERS, { idIsEventId: true })
+  @Patch(":id")
+  update(@Param("id") id: string, @Body() input: UpdateEventDto, @CurrentUser() user: AuthUser) {
+    return this.events.update(id, input, user);
+  }
+
+  /** Công bố / chuyển về nháp / kết thúc: Chủ sự kiện / Đồng tổ chức; huỷ: chỉ Chủ sự kiện (kiểm tra trong service). */
+  @Roles(UserRole.ORGANIZER)
+  @EventRoles(EVENT_ROLES.MANAGERS, { idIsEventId: true })
+  @Patch(":id/status")
+  async changeStatus(@Param("id") id: string, @Body() input: UpdateEventStatusDto, @CurrentUser() user: AuthUser) {
+    const myRole = user.role === UserRole.ADMIN ? null : await this.access.roleOf(id, user.id);
+    return this.events.changeStatus(id, input.status, user, myRole);
   }
 }
 

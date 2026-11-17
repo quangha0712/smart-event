@@ -5,7 +5,8 @@ import type { EventMemberRole } from "@/types/eventMember";
 export type EventCapability =
   | "viewMembers" // xem danh sách thành viên ban tổ chức
   | "manageMembers" // mời / đổi vai trò / gỡ thành viên ban tổ chức
-  | "manageContent" // sửa thông tin, lịch trình, diễn giả
+  | "manageContent" // sửa thông tin, công bố / chuyển về nháp / kết thúc, lịch trình, diễn giả
+  | "cancelEvent" // huỷ sự kiện
   | "manageResources" // nhân sự, nhà cung cấp, tài trợ, dự toán – thực chi
   | "viewDashboard"
   | "useAi"
@@ -17,7 +18,7 @@ export type EventCapability =
  * (apps/api/src/auth/event-access.ts). Frontend chỉ dùng để ẩn/hiện; API mới là nơi chặn thật.
  */
 export const EVENT_ROLE_CAPABILITIES: Record<EventMemberRole, readonly EventCapability[]> = {
-  OWNER: ["viewMembers", "manageMembers", "manageContent", "manageResources", "viewDashboard", "useAi", "viewAudit", "checkIn"],
+  OWNER: ["viewMembers", "manageMembers", "manageContent", "cancelEvent", "manageResources", "viewDashboard", "useAi", "viewAudit", "checkIn"],
   CO_ORGANIZER: ["viewMembers", "manageContent", "manageResources", "viewDashboard", "useAi", "viewAudit", "checkIn"],
   CHECKIN_STAFF: ["viewMembers", "checkIn"],
 };

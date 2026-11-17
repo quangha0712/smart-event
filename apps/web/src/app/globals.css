@@ -363,3 +363,11 @@ a.compact-item:hover { border-color: var(--primary); }
   .detail-layout { grid-template-columns: 1fr; }
   .detail-panel { position: static; order: -1; }
 }
+
+/* ---------- Trạng thái sự kiện ---------- */
+.button-danger { background: var(--danger); color: #fff; }
+.button-danger:hover { background: #912018; }
+.status-controls { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border); }
+.status-action { display: flex; flex-direction: column; gap: 4px; }
+.status-action .button { width: 100%; }
+.status-hint { margin: 0; line-height: 1.5; }

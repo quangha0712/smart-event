@@ -10,6 +10,7 @@ import { useApi } from "@/lib/useApi";
 import type { EventDetail, MyRegistration, ScheduleItem, Speaker } from "@/types/event";
 import { EVENT_MEMBER_ROLE_LABELS } from "@/types/eventMember";
 import { useEventAccess } from "./EventAccessProvider";
+import { EventStatusControls } from "./EventStatusControls";
 
 /** Gom các phiên theo ngày (giờ địa phương), giữ thứ tự thời gian. */
 function groupByDay(items: ScheduleItem[]) {
@@ -71,7 +72,9 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
   // Ban tổ chức / ADMIN: lối vào quản lý theo vai trò trong sự kiện.
   if (hasRole("ORGANIZER")) {
     const role = access.roleOf(event.id);
+    const editable = event.status === "DRAFT" || event.status === "PUBLISHED";
     const links = [
+      { show: editable && access.can(event.id, "manageContent"), href: `/events/${id}/edit`, label: "Sửa thông tin sự kiện" },
       { show: access.can(event.id, "viewMembers"), href: `/events/${id}/members`, label: "Thành viên ban tổ chức" },
       { show: access.can(event.id, "viewDashboard"), href: `/dashboard?eventId=${id}`, label: "Số liệu" },
       { show: access.can(event.id, "manageResources"), href: `/resources?eventId=${id}`, label: "Nguồn lực & ngân sách" },
@@ -99,6 +102,13 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
         ) : (
           <p className="muted small">Bạn không thuộc ban tổ chức sự kiện này.</p>
         )}
+        <EventStatusControls
+          event={event}
+          onChanged={() => {
+            reloadEvent();
+            access.reload();
+          }}
+        />
       </aside>
     );
   }
@@ -145,7 +155,7 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
 }
 
 /** Trang chi tiết sự kiện: mô tả, lịch trình, diễn giả, đăng ký / lối vào quản lý. */
-export function EventDetailView({ eventId }: { eventId: string }) {
+export function EventDetailView({ eventId, justUpdated = false }: { eventId: string; justUpdated?: boolean }) {
   const { user, hasRole } = useAuth();
   // Gửi kèm token để thành viên ban tổ chức xem được cả bản nháp.
   const detail = useApi((signal) => api.get<EventDetail>(`/events/${encodeURIComponent(eventId)}`, { auth: Boolean(user), signal }), [
@@ -193,6 +203,11 @@ export function EventDetailView({ eventId }: { eventId: string }) {
         </div>
       </header>
 
+      {justUpdated && (
+        <p className="notice-ok" role="status">
+          Đã lưu thay đổi.
+        </p>
+      )}
       {event.status === "DRAFT" && (
         <p className="notice-warn" role="status">
           Bản nháp – chỉ ban tổ chức và Quản trị viên thấy. Người tham dự chưa xem hoặc đăng ký được.

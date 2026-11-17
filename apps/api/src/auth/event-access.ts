@@ -33,6 +33,8 @@ export type EventRolesOptions = {
   resolveFrom?: EventScopedModel;
   /** Cho phép không có eventId (danh sách): controller tự lọc bằng EventAccessService.eventFilter. */
   optional?: boolean;
+  /** Route /events/:id/...: tham số :id chính là eventId. */
+  idIsEventId?: boolean;
 };
 
 export const EVENT_ROLES_KEY = "auth:eventRoles";
@@ -108,6 +110,7 @@ export class EventMemberGuard implements CanActivate {
     if (user.role === UserRole.ADMIN) return true;
 
     const candidates = [req.params?.eventId, req.query?.eventId, req.body?.eventId];
+    if (meta.idIsEventId) candidates.push(req.params?.id);
     if (meta.resolveFrom && typeof req.params?.id === "string") {
       const delegate = (this.prisma as unknown as Record<string, { findUnique: (a: unknown) => Promise<{ eventId: string } | null> }>)[
         meta.resolveFrom

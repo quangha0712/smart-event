@@ -8,6 +8,7 @@ const CAPABILITY_LABELS: Record<EventCapability, string> = {
   viewMembers: "xem thành viên ban tổ chức",
   manageMembers: "quản lý thành viên ban tổ chức",
   manageContent: "quản lý nội dung sự kiện",
+  cancelEvent: "huỷ sự kiện",
   manageResources: "quản lý nguồn lực và ngân sách",
   viewDashboard: "xem số liệu sự kiện",
   useAi: "dùng phân tích AI",

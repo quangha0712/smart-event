@@ -51,6 +51,7 @@ export type ScheduleItem = {
 
 /** GET /events/:id – bản nháp chỉ trả cho ban tổ chức của sự kiện và ADMIN. */
 export type EventDetail = EventSummary & {
+  updatedAt?: string;
   schedules: ScheduleItem[];
   speakers: Speaker[];
 };

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import type { EventSummary } from "@/types/event";
+import type { EventDetail, EventSummary } from "@/types/event";
 import { useEventAccess } from "./EventAccessProvider";
 
 type Fields = {
@@ -20,15 +20,34 @@ type Errors = Partial<Record<keyof Fields, string>>;
 
 const EMPTY: Fields = { name: "", description: "", location: "", startsAt: "", endsAt: "", capacity: "" };
 
-/** Giá trị nhỏ nhất cho ô ngày giờ: thời điểm hiện tại theo giờ máy (định dạng yyyy-MM-ddTHH:mm). */
-function nowLocalInput() {
-  const d = new Date();
-  d.setSeconds(0, 0);
+/** Đổi thời điểm sang giá trị cho <input type="datetime-local"> theo giờ máy (yyyy-MM-ddTHH:mm). */
+function toLocalInput(d: Date) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-/** Kiểm tra giống CreateEventDto phía API để báo lỗi ngay trên form (API vẫn kiểm tra lại). */
-function validate(f: Fields): Errors {
+/** Giá trị nhỏ nhất cho ô ngày giờ: thời điểm hiện tại. */
+function nowLocalInput() {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  return toLocalInput(d);
+}
+
+function fieldsFrom(event: EventDetail): Fields {
+  return {
+    name: event.name,
+    description: event.description ?? "",
+    location: event.location ?? "",
+    startsAt: toLocalInput(new Date(event.startsAt)),
+    endsAt: toLocalInput(new Date(event.endsAt)),
+    capacity: event.capacity === null ? "" : String(event.capacity),
+  };
+}
+
+/**
+ * Kiểm tra giống CreateEventDto phía API để báo lỗi ngay trên form (API vẫn kiểm tra lại).
+ * Khi sửa, chỉ báo "ở quá khứ" nếu người dùng đổi giờ bắt đầu (sự kiện đang diễn ra vẫn sửa được các trường khác).
+ */
+function validate(f: Fields, original?: Fields): Errors {
   const errors: Errors = {};
   if (!f.name.trim()) errors.name = "Cần nhập tên sự kiện";
   else if (f.name.trim().length > 191) errors.name = "Tên sự kiện tối đa 191 ký tự";
@@ -37,7 +56,9 @@ function validate(f: Fields): Errors {
   const starts = f.startsAt ? new Date(f.startsAt) : null;
   const ends = f.endsAt ? new Date(f.endsAt) : null;
   if (!starts || isNaN(starts.valueOf())) errors.startsAt = "Cần chọn thời gian bắt đầu";
-  else if (starts.getTime() < Date.now() - 60_000) errors.startsAt = "Thời gian bắt đầu không được ở quá khứ";
+  else if (f.startsAt !== original?.startsAt && starts.getTime() < Date.now() - 60_000) {
+    errors.startsAt = "Thời gian bắt đầu không được ở quá khứ";
+  }
   if (!ends || isNaN(ends.valueOf())) errors.endsAt = "Cần chọn thời gian kết thúc";
   else if (starts && !isNaN(starts.valueOf()) && ends <= starts) errors.endsAt = "Thời gian kết thúc phải sau thời gian bắt đầu";
 
@@ -49,13 +70,16 @@ function validate(f: Fields): Errors {
 }
 
 /**
- * Form tạo sự kiện (POST /events). Sự kiện mới ở trạng thái Bản nháp và người tạo tự thành Chủ sự kiện;
- * tạo xong chuyển sang mục Thành viên ban tổ chức để mời thêm người.
+ * Form tạo / sửa sự kiện.
+ *  - Tạo (POST /events): sự kiện ở Bản nháp, người tạo thành Chủ sự kiện → chuyển sang mục Thành viên ban tổ chức.
+ *  - Sửa (PATCH /events/:id, truyền `event`): điền sẵn dữ liệu, lưu xong quay về trang chi tiết.
  */
-export function CreateEventForm() {
+export function CreateEventForm({ event }: { event?: EventDetail } = {}) {
   const router = useRouter();
   const access = useEventAccess();
-  const [fields, setFields] = useState<Fields>(EMPTY);
+  const isEdit = Boolean(event);
+  const [original] = useState<Fields | undefined>(() => (event ? fieldsFrom(event) : undefined));
+  const [fields, setFields] = useState<Fields>(() => (event ? fieldsFrom(event) : EMPTY));
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +92,7 @@ export function CreateEventForm() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setServerError("");
-    const found = validate(fields);
+    const found = validate(fields, original);
     setErrors(found);
     if (Object.keys(found).length > 0) {
       // Đưa con trỏ tới ô lỗi đầu tiên.
@@ -78,6 +102,24 @@ export function CreateEventForm() {
     }
 
     setSubmitting(true);
+    if (event) {
+      try {
+        await api.patch(`/events/${encodeURIComponent(event.id)}`, {
+          name: fields.name.trim(),
+          // Chuỗi rỗng / null → API xoá nội dung; sức chứa trống → không giới hạn.
+          description: fields.description.trim(),
+          location: fields.location.trim(),
+          startsAt: new Date(fields.startsAt).toISOString(),
+          endsAt: new Date(fields.endsAt).toISOString(),
+          capacity: fields.capacity.trim() ? Number(fields.capacity) : null,
+        });
+        router.push(`/events/${encodeURIComponent(event.id)}?updated=1`);
+      } catch (err) {
+        setServerError(err instanceof ApiError ? err.message : "Không lưu được thay đổi, vui lòng thử lại.");
+        setSubmitting(false);
+      }
+      return;
+    }
     try {
       const created = await api.post<EventSummary>("/events", {
         name: fields.name.trim(),
@@ -108,10 +150,16 @@ export function CreateEventForm() {
   return (
     <section className="page-section">
       <span className="eyebrow">SỰ KIỆN</span>
-      <h1 className="page-title">Tạo sự kiện</h1>
-      <p className="muted">
-        Sự kiện mới ở trạng thái <strong>Bản nháp</strong> (chỉ ban tổ chức thấy) và bạn sẽ là <strong>Chủ sự kiện</strong>.
-      </p>
+      <h1 className="page-title">{isEdit ? "Sửa thông tin sự kiện" : "Tạo sự kiện"}</h1>
+      {isEdit ? (
+        <p className="muted">
+          {event?.name}. Công bố / chuyển về nháp / huỷ sự kiện ở trang chi tiết sự kiện.
+        </p>
+      ) : (
+        <p className="muted">
+          Sự kiện mới ở trạng thái <strong>Bản nháp</strong> (chỉ ban tổ chức thấy) và bạn sẽ là <strong>Chủ sự kiện</strong>.
+        </p>
+      )}
 
       <form className="form form-card" onSubmit={handleSubmit} noValidate>
         <label className="field">
@@ -164,7 +212,7 @@ export function CreateEventForm() {
             <input
               id="event-startsAt"
               type="datetime-local"
-              min={minDate}
+              min={isEdit ? undefined : minDate}
               value={fields.startsAt}
               onChange={set("startsAt")}
               required
@@ -180,7 +228,7 @@ export function CreateEventForm() {
             <input
               id="event-endsAt"
               type="datetime-local"
-              min={fields.startsAt || minDate}
+              min={fields.startsAt || (isEdit ? undefined : minDate)}
               value={fields.endsAt}
               onChange={set("endsAt")}
               required
@@ -215,11 +263,11 @@ export function CreateEventForm() {
         )}
 
         <div className="form-actions">
-          <Link className="button button-ghost" href="/events">
+          <Link className="button button-ghost" href={event ? `/events/${encodeURIComponent(event.id)}` : "/events"}>
             Huỷ
           </Link>
           <button type="submit" className="button" disabled={submitting}>
-            {submitting ? "Đang tạo…" : "Tạo sự kiện"}
+            {isEdit ? (submitting ? "Đang lưu…" : "Lưu thay đổi") : submitting ? "Đang tạo…" : "Tạo sự kiện"}
           </button>
         </div>
       </form>
