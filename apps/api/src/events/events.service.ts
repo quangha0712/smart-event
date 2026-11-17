@@ -9,6 +9,7 @@ import { EventMemberRole, EventStatus, Prisma, UserRole } from "@prisma/client";
 import type { AuthUser } from "../auth/auth.decorators";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { PrismaService } from "../prisma/prisma.module";
+import { PUBLIC_SPEAKER_SELECT } from "../schedules/schedules.service";
 import { CreateEventDto } from "./dto/create-event.dto";
 import { UpdateEventDto } from "./dto/update-event.dto";
 
@@ -49,8 +50,9 @@ export class EventsService {
     const event = await this.prisma.event.findUnique({
       where: { id },
       include: {
-        schedules: { orderBy: { startsAt: "asc" }, include: { speakers: true } },
-        speakers: { orderBy: { fullName: "asc" } },
+        // Trang công khai: không trả email diễn giả.
+        schedules: { orderBy: { startsAt: "asc" }, include: { speakers: { select: PUBLIC_SPEAKER_SELECT } } },
+        speakers: { orderBy: { fullName: "asc" }, select: PUBLIC_SPEAKER_SELECT },
         ...summaryInclude,
       },
     });

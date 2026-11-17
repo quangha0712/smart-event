@@ -8,7 +8,8 @@ import { useApi } from "@/lib/useApi";
 export type FieldDef = {
   name: string;
   label: string;
-  type?: "text" | "email" | "tel" | "url" | "number" | "datetime" | "select" | "textarea";
+  /** checkboxes: chọn nhiều từ `options`; giá trị form là chuỗi id ngăn bởi dấu phẩy, gửi API dạng mảng. */
+  type?: "text" | "email" | "tel" | "url" | "number" | "datetime" | "select" | "textarea" | "checkboxes";
   required?: boolean;
   /** Với select: giá trị "" = không chọn (gửi null khi sửa / bỏ qua khi thêm). */
   options?: Array<{ value: string; label: string }>;
@@ -62,6 +63,12 @@ function toBody(fields: FieldDef[], values: FormValues, mode: "add" | "edit") {
   const body: Record<string, unknown> = {};
   for (const f of fields) {
     const raw = (values[f.name] ?? "").trim();
+    if (f.type === "checkboxes") {
+      const ids = raw ? raw.split(",") : [];
+      // Khi sửa luôn gửi mảng (kể cả rỗng) để thay toàn bộ lựa chọn; khi thêm bỏ qua nếu không chọn gì.
+      if (ids.length || mode === "edit") body[f.name] = ids;
+      continue;
+    }
     if (raw === "") {
       if (mode === "edit" && !f.required) body[f.name] = null;
       continue;
@@ -213,6 +220,30 @@ export function ResourceCrud<T extends { id: string }>(props: Props<T>) {
                 "aria-invalid": Boolean(errors[f.name]),
                 onChange: (e: { target: { value: string } }) => setValues((v) => ({ ...v, [f.name]: e.target.value })),
               };
+              if (f.type === "checkboxes") {
+                const chosen = new Set((values[f.name] ?? "").split(",").filter(Boolean));
+                const toggle = (value: string) => {
+                  const next = new Set(chosen);
+                  if (next.has(value)) next.delete(value);
+                  else next.add(value);
+                  setValues((v) => ({ ...v, [f.name]: [...next].join(",") }));
+                };
+                return (
+                  <fieldset key={f.name} className="field crud-wide crud-checkboxes">
+                    <legend>{f.label}</legend>
+                    {f.options?.length ? (
+                      f.options.map((o) => (
+                        <label key={o.value} className="checkbox">
+                          <input type="checkbox" checked={chosen.has(o.value)} onChange={() => toggle(o.value)} />
+                          <span>{o.label}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <span className="muted small">{f.placeholder ?? "Chưa có lựa chọn nào."}</span>
+                    )}
+                  </fieldset>
+                );
+              }
               return (
                 <label key={f.name} className={f.wide || f.type === "textarea" ? "field crud-wide" : "field"} htmlFor={id}>
                   <span>

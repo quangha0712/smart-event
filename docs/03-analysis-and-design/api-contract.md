@@ -113,6 +113,8 @@ Ban tổ chức (ORGANIZER) chỉ thao tác được trên sự kiện mình là
 | GET | `/me/event-memberships` | (ORGANIZER) | Sự kiện mình là thành viên kèm vai trò |
 | PATCH | `/events/:id` | OWNER, CO_ORGANIZER | Sửa thông tin (không sửa sự kiện đã huỷ / kết thúc; sức chứa ≥ số đăng ký; `null` = xoá mô tả / địa điểm / bỏ giới hạn sức chứa) |
 | PATCH | `/events/:id/status` `{ status }` | OWNER, CO_ORGANIZER (huỷ: chỉ OWNER) | DRAFT→PUBLISHED (chưa kết thúc), PUBLISHED→DRAFT (chưa có đăng ký), PUBLISHED→COMPLETED (sau giờ kết thúc), DRAFT/PUBLISHED→CANCELLED |
+| GET/POST/PATCH/DELETE | `/events/:eventId/schedules[/:id]` | OWNER, CO_ORGANIZER | Lịch trình: `{ title, startsAt, endsAt, room?, description?, speakerIds? }`; phiên phải nằm trong thời gian sự kiện, diễn giả phải cùng sự kiện; `speakerIds` khi sửa thay toàn bộ |
+| GET/POST/PATCH/DELETE | `/events/:eventId/speakers[/:id]` | OWNER, CO_ORGANIZER | Diễn giả: `{ fullName, title?, organization?, bio?, email?, avatarUrl? }`; email chỉ ban tổ chức thấy, `GET /events/:id` công khai không trả email |
 | GET | `/events/:eventId/members` | OWNER, CO_ORGANIZER, CHECKIN_STAFF | Danh sách ban tổ chức |
 | POST | `/events/:eventId/members` `{ email, role }` | OWNER | Thêm thành viên (tài khoản phải có quyền ORGANIZER; chỉ ADMIN gán OWNER) |
 | PATCH | `/events/:eventId/members/:userId` `{ role }` | OWNER | Đổi vai trò (không đổi OWNER, trừ ADMIN) |

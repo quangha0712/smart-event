@@ -75,6 +75,7 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
     const editable = event.status === "DRAFT" || event.status === "PUBLISHED";
     const links = [
       { show: editable && access.can(event.id, "manageContent"), href: `/events/${id}/edit`, label: "Sửa thông tin sự kiện" },
+      { show: editable && access.can(event.id, "manageContent"), href: `/events/${id}/schedule`, label: "Lịch trình & diễn giả" },
       { show: access.can(event.id, "viewMembers"), href: `/events/${id}/members`, label: "Thành viên ban tổ chức" },
       { show: access.can(event.id, "viewDashboard"), href: `/dashboard?eventId=${id}`, label: "Số liệu" },
       { show: access.can(event.id, "manageResources"), href: `/resources?eventId=${id}&tab=staff`, label: "Nhân sự & phân ca" },
@@ -164,6 +165,7 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
 /** Trang chi tiết sự kiện: mô tả, lịch trình, diễn giả, đăng ký / lối vào quản lý. */
 export function EventDetailView({ eventId, justUpdated = false }: { eventId: string; justUpdated?: boolean }) {
   const { user, hasRole } = useAuth();
+  const access = useEventAccess();
   // Gửi kèm token để thành viên ban tổ chức xem được cả bản nháp.
   const detail = useApi((signal) => api.get<EventDetail>(`/events/${encodeURIComponent(eventId)}`, { auth: Boolean(user), signal }), [
     eventId,
@@ -184,6 +186,7 @@ export function EventDetailView({ eventId, justUpdated = false }: { eventId: str
   }
 
   const event = detail.data;
+  const canEditSchedule = (event.status === "DRAFT" || event.status === "PUBLISHED") && access.can(event.id, "manageContent");
   const days = groupByDay(event.schedules);
   const multiDay = days.length > 1;
 
@@ -229,7 +232,10 @@ export function EventDetailView({ eventId, justUpdated = false }: { eventId: str
           </section>
 
           <section aria-labelledby="schedule-title">
-            <h2 id="schedule-title">Lịch trình</h2>
+            <div className="section-head">
+              <h2 id="schedule-title">Lịch trình</h2>
+              {canEditSchedule && <Link href={`/events/${encodeURIComponent(event.id)}/schedule`}>Chỉnh sửa lịch trình</Link>}
+            </div>
             {days.length === 0 && <p className="muted">Chưa có lịch trình.</p>}
             {days.map((items) => (
               <div key={items[0].startsAt} className="schedule-day">
@@ -259,7 +265,10 @@ export function EventDetailView({ eventId, justUpdated = false }: { eventId: str
           </section>
 
           <section aria-labelledby="speakers-title">
-            <h2 id="speakers-title">Diễn giả</h2>
+            <div className="section-head">
+              <h2 id="speakers-title">Diễn giả</h2>
+              {canEditSchedule && <Link href={`/events/${encodeURIComponent(event.id)}/schedule`}>Chỉnh sửa diễn giả</Link>}
+            </div>
             {event.speakers.length === 0 && <p className="muted">Chưa có diễn giả.</p>}
             <div className="speaker-grid">
               {event.speakers.map((s) => (
