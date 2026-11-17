@@ -12,6 +12,18 @@ type BarcodeDetectorCtor = {
 };
 
 const SCAN_INTERVAL_MS = 200;
+/** Thời gian hiện kết quả check-in đè lên camera. */
+const FEEDBACK_MS = 2500;
+
+/** Kết quả lượt quét gần nhất để hiện đè lên camera. `id` đổi = lượt mới (kể cả cùng nội dung). */
+export type CameraFeedback = {
+  id: number;
+  tone: "ok" | "warn" | "bad";
+  title: string;
+  detail?: string;
+};
+
+const FEEDBACK_ICON: Record<CameraFeedback["tone"], string> = { ok: "✓", warn: "!", bad: "✕" };
 /** Cùng một mã đọc lại trong khoảng này thì bỏ qua (camera thường đọc 1 vé nhiều lần liên tiếp). */
 const SAME_CODE_COOLDOWN_MS = 3000;
 /** Thu nhỏ khung hình trước khi giải mã bằng jsQR cho nhanh. */
@@ -42,7 +54,16 @@ async function createDetector(): Promise<BarcodeDetectorLike | null> {
  * Quét QR bằng camera. Dùng BarcodeDetector khi trình duyệt hỗ trợ (Chrome/Android), ngược lại giải mã bằng jsQR.
  * `paused` = đang gửi lượt quét trước → tạm ngừng đọc. Camera chỉ dùng được trên HTTPS hoặc localhost.
  */
-export function CameraScanner({ onDetect, paused = false }: { onDetect: (code: string) => void; paused?: boolean }) {
+export function CameraScanner({
+  onDetect,
+  paused = false,
+  feedback = null,
+}: {
+  onDetect: (code: string) => void;
+  paused?: boolean;
+  /** Kết quả check-in vừa xong – hiện đè lên camera ~2,5 giây. */
+  feedback?: CameraFeedback | null;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -59,6 +80,16 @@ export function CameraScanner({ onDetect, paused = false }: { onDetect: (code: s
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string | undefined>(undefined);
   const [flash, setFlash] = useState(false);
+  const [shown, setShown] = useState<CameraFeedback | null>(null);
+
+  // Mỗi kết quả mới hiện đè lên camera một lúc rồi tự ẩn để quét người tiếp theo.
+  useEffect(() => {
+    if (!feedback) return;
+    setShown(feedback);
+    navigator.vibrate?.(feedback.tone === "ok" ? 120 : [80, 60, 80, 60, 80]);
+    const t = window.setTimeout(() => setShown((cur) => (cur?.id === feedback.id ? null : cur)), FEEDBACK_MS);
+    return () => window.clearTimeout(t);
+  }, [feedback]);
   /** Tăng lên để mở lại camera (nút Thử lại). */
   const [attempt, setAttempt] = useState(0);
 
@@ -170,9 +201,18 @@ export function CameraScanner({ onDetect, paused = false }: { onDetect: (code: s
     <div className="camera">
       <div className={flash ? "camera-view camera-flash" : "camera-view"}>
         <video ref={videoRef} playsInline muted aria-label="Hình ảnh camera để quét mã QR" />
-        {status === "running" && <div className="camera-frame" aria-hidden="true" />}
+        {status === "running" && !shown && <div className="camera-frame" aria-hidden="true" />}
         {status === "starting" && <div className="camera-overlay">Đang mở camera…</div>}
-        {status === "running" && paused && <div className="camera-overlay">Đang kiểm tra vé…</div>}
+        {status === "running" && paused && !shown && <div className="camera-overlay">Đang kiểm tra vé…</div>}
+        {status === "running" && shown && (
+          <div key={shown.id} className={`camera-result camera-result-${shown.tone}`} role="status" aria-live="assertive">
+            <span className="camera-result-icon" aria-hidden="true">
+              {FEEDBACK_ICON[shown.tone]}
+            </span>
+            <strong className="camera-result-title">{shown.title}</strong>
+            {shown.detail && <span className="camera-result-detail">{shown.detail}</span>}
+          </div>
+        )}
         {status === "error" && <div className="camera-overlay camera-overlay-error">{error}</div>}
       </div>
       <div className="camera-actions">

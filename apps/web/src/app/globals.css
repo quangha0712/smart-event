@@ -505,3 +505,20 @@ a.compact-item:hover { border-color: var(--primary); }
 .meter-over .meter-fill { background: var(--status-critical); }
 .chart-table summary { cursor: pointer; font-size: 13px; color: var(--primary); font-weight: 600; margin-top: 4px; }
 .chart-table .table-wrap { margin-top: 8px; }
+
+/* Kết quả check-in hiện đè lên camera. */
+.camera-result {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; padding: 16px; text-align: center; color: #fff; animation: camera-result-in .15s ease-out;
+}
+.camera-result-ok { background: rgba(6, 118, 71, .88); }
+.camera-result-warn { background: rgba(181, 71, 8, .9); }
+.camera-result-bad { background: rgba(180, 35, 24, .9); }
+.camera-result-icon {
+  display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%;
+  border: 3px solid #fff; font-size: 34px; font-weight: 800; line-height: 1;
+}
+.camera-result-title { font-size: clamp(20px, 5vw, 26px); }
+.camera-result-detail { font-size: 16px; font-weight: 600; opacity: .95; }
+@keyframes camera-result-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .camera-result { animation: none; } }

@@ -9,7 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import type { EventSummary } from "@/types/event";
 import { EVENT_MEMBER_ROLE_LABELS } from "@/types/eventMember";
-import { CameraScanner } from "./CameraScanner";
+import { CameraScanner, type CameraFeedback } from "./CameraScanner";
 
 type CheckInResult = "ACCEPTED" | "DUPLICATE" | "INVALID_CODE" | "WRONG_EVENT" | "NOT_ELIGIBLE";
 type Method = "QR" | "NFC";
@@ -72,6 +72,8 @@ export function CheckInScreen() {
   /** Ref song song với busy để camera (gọi từ vòng lặp đọc khung hình) không gửi chồng lượt quét. */
   const busyRef = useRef(false);
   const [camera, setCamera] = useState(false);
+  /** Kết quả lượt quét gần nhất để hiện đè lên camera. */
+  const [cameraFeedback, setCameraFeedback] = useState<CameraFeedback | null>(null);
   const [error, setError] = useState("");
   const [log, setLog] = useState<ScanLog[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,8 +100,16 @@ export function CheckInScreen() {
       const res = await api.post<CheckInResponse>("/check-in", { eventId, code: value, method: scanMethod });
       seq.current += 1;
       setLog((items) => [{ ...res, id: seq.current, at: new Date(), method: scanMethod }, ...items].slice(0, 10));
+      const detail =
+        res.result === "DUPLICATE" && res.checkedInAt
+          ? [res.attendee?.fullName, `Đã check-in lúc ${timeFormat.format(new Date(res.checkedInAt))}`].filter(Boolean).join(" · ")
+          : res.attendee?.fullName;
+      setCameraFeedback({ id: seq.current, tone: TONE[res.result], title: res.message, detail });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Không gửi được lượt quét.");
+      const message = err instanceof ApiError ? err.message : "Không gửi được lượt quét.";
+      setError(message);
+      seq.current += 1;
+      setCameraFeedback({ id: seq.current, tone: "bad", title: "Chưa check-in được", detail: message });
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -176,7 +186,7 @@ export function CheckInScreen() {
               </button>
             </div>
           )}
-          {camera && method === "QR" && <CameraScanner paused={busy} onDetect={(value) => submitCode(value, "QR")} />}
+          {camera && method === "QR" && <CameraScanner paused={busy} feedback={cameraFeedback} onDetect={(value) => submitCode(value, "QR")} />}
 
           <form className="scan-form" onSubmit={handleSubmit}>
             <label className="field scan-field">
