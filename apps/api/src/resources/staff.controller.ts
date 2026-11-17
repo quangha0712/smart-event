@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
-import { Roles } from "../auth/auth.decorators";
+import { AuthUser, CurrentUser, Roles } from "../auth/auth.decorators";
+import { EVENT_ROLES, EventAccessService, EventRoles } from "../auth/event-access";
 import { PrismaService } from "../prisma/prisma.module";
 import {
   CreateStaffAssignmentDto,
@@ -9,6 +10,11 @@ import {
   UpdateStaffDto,
 } from "./dto/staff.dto";
 
+/*
+ * Danh bạ nhân sự dùng chung (không gắn sự kiện) → chỉ cần quyền Ban tổ chức.
+ * Phân công nhân sự gắn với sự kiện → chỉ Chủ sự kiện / Đồng tổ chức của sự kiện (và ADMIN);
+ * danh sách không truyền eventId chỉ trả phân công của các sự kiện mình quản lý.
+ */
 @Roles(UserRole.ORGANIZER)
 @Controller("resources/staff")
 export class StaffController {
@@ -48,27 +54,34 @@ export class StaffController {
 @Roles(UserRole.ORGANIZER)
 @Controller("resources/staff-assignments")
 export class StaffAssignmentsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly access: EventAccessService,
+  ) {}
 
+  @EventRoles(EVENT_ROLES.MANAGERS, { optional: true })
   @Get()
-  list(@Query("eventId") eventId?: string) {
+  async list(@CurrentUser() user: AuthUser, @Query("eventId") eventId?: string) {
     return this.prisma.staffAssignment.findMany({
-      where: { eventId },
+      where: { eventId: await this.access.eventFilter(user, eventId, EVENT_ROLES.MANAGERS) },
       include: { staff: { select: { id: true, fullName: true, phone: true } } },
       orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }],
     });
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS)
   @Post()
   create(@Body() dto: CreateStaffAssignmentDto) {
     return this.prisma.staffAssignment.create({ data: dto });
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS, { resolveFrom: "staffAssignment" })
   @Patch(":id")
   update(@Param("id") id: string, @Body() dto: UpdateStaffAssignmentDto) {
     return this.prisma.staffAssignment.update({ where: { id }, data: dto });
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS, { resolveFrom: "staffAssignment" })
   @Delete(":id")
   @HttpCode(204)
   async remove(@Param("id") id: string) {

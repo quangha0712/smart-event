@@ -14,7 +14,10 @@ type AuthContextValue = {
   /** true khi người dùng vừa bấm Đăng xuất (khác với phiên hết hạn). */
   signedOut: boolean;
   login: (email: string, password: string) => Promise<AuthUser>;
+  register: (input: { fullName: string; email: string; password: string }) => Promise<AuthUser>;
   logout: () => void;
+  /** Cập nhật thông tin người dùng trong phiên sau khi sửa hồ sơ. */
+  updateUser: (user: AuthUser) => void;
   /** ADMIN luôn được tính là có quyền. */
   hasRole: (...roles: UserRole[]) => boolean;
 };
@@ -75,14 +78,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const result = await api.post<LoginResponse>("/auth/login", { email, password }, { auth: false });
+  const startSession = useCallback((result: LoginResponse) => {
     saveSession(result.accessToken, result.user);
     setSignedOut(false);
     setUser(result.user);
     setStatus("authenticated");
     return result.user;
   }, []);
+
+  const login = useCallback(
+    async (email: string, password: string) =>
+      startSession(await api.post<LoginResponse>("/auth/login", { email, password }, { auth: false })),
+    [startSession],
+  );
+
+  /** Đăng ký tài khoản Người tham dự (API luôn tạo ATTENDEE) rồi đăng nhập luôn bằng token trả về. */
+  const register = useCallback(
+    async (input: { fullName: string; email: string; password: string }) =>
+      startSession(await api.post<LoginResponse>("/auth/register", input, { auth: false })),
+    [startSession],
+  );
 
   const logout = useCallback(() => {
     clearSession();
@@ -91,9 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus("anonymous");
   }, []);
 
+  const updateUser = useCallback((next: AuthUser) => {
+    saveUser(next);
+    setUser(next);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, signedOut, login, logout, hasRole: (...roles) => hasRole(user, roles) }),
-    [user, status, signedOut, login, logout],
+    () => ({ user, status, signedOut, login, register, logout, updateUser, hasRole: (...roles) => hasRole(user, roles) }),
+    [user, status, signedOut, login, register, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

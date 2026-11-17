@@ -3,7 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import { UserRole } from "@prisma/client";
 import { compare, hash, hashSync } from "bcryptjs";
 import { PrismaService } from "../prisma/prisma.module";
-import { LoginDto, RegisterDto } from "./auth.dto";
+import { ChangePasswordDto, LoginDto, RegisterDto, UpdateProfileDto } from "./auth.dto";
 import { JwtPayload } from "./auth.guard";
 
 const BCRYPT_ROUNDS = 10;
@@ -41,6 +41,23 @@ export class AuthService {
 
   me(id: string) {
     return this.prisma.user.findUniqueOrThrow({ where: { id }, select: publicUser });
+  }
+
+  updateProfile(id: string, dto: UpdateProfileDto) {
+    const fullName = dto.fullName.trim();
+    if (!fullName) throw new BadRequestException("Cần nhập họ tên");
+    return this.prisma.user.update({ where: { id }, data: { fullName }, select: publicUser });
+  }
+
+  async changePassword(id: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id }, select: { passwordHash: true } });
+    if (!(await compare(dto.currentPassword, user.passwordHash))) {
+      throw new BadRequestException("Mật khẩu hiện tại không đúng");
+    }
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException("Mật khẩu mới phải khác mật khẩu hiện tại");
+    }
+    await this.prisma.user.update({ where: { id }, data: { passwordHash: await hash(dto.newPassword, BCRYPT_ROUNDS) } });
   }
 
   listUsers() {

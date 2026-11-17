@@ -17,6 +17,12 @@ Các entity được khai báo tại `prisma/schema.prisma`; migration nằm tro
   - Chỉ lượt ACCEPTED mới ghi `Ticket.checkedInAt`; số liệu tổng hợp cho `POST /ai/check-in-analysis` lấy từ bảng này
 - Device 1—N SensorReading (loại cảm biến, khu vực `zone`, giá trị, đơn vị, thời điểm đo; PEOPLE_COUNT = số người trong khu vực)
 
+## Ban tổ chức theo sự kiện
+
+- Event N—N User qua EventMember (khoá chính kép `eventId + userId`, `role` = OWNER / CO_ORGANIZER / CHECKIN_STAFF, `invitedById`)
+- Event N—0..1 User qua `createdById` (người tạo; người tạo tự thành OWNER)
+- Ma trận quyền: `apps/api/src/auth/event-access.ts`
+
 ## Nguồn lực (module `resources`)
 
 - StaffMember (có thể liên kết 0..1 User); Event 1—N StaffAssignment N—1 StaffMember (duy nhất theo `eventId + staffId + role`)

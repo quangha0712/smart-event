@@ -84,6 +84,10 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 |---|---|
 | admin@example.com | ADMIN – toàn quyền, đổi quyền người dùng |
 | organizer@example.com | ORGANIZER – quản lý sự kiện, nguồn lực, check-in, AI |
+| cohost@example.com | ORGANIZER – Đồng tổ chức sự kiện demo, Chủ sự kiện của một bản nháp riêng |
+| checkin@example.com | ORGANIZER – Nhân viên check-in sự kiện demo (đăng nhập vào thẳng màn quét vé) |
 | attendee@example.com | ATTENDEE – có sẵn một vé QR (mã in ra khi seed) |
+
+Ban tổ chức chỉ thấy và thao tác trên sự kiện mình là thành viên (bảng `EventMember`): Chủ sự kiện (người tạo, mời thêm người), Đồng tổ chức (nội dung, nguồn lực, ngân sách, check-in, AI, audit log), Nhân viên check-in (chỉ quét vé). Quản trị viên thấy tất cả. `organizer@example.com` là Chủ sự kiện demo.
 
 Các endpoint AI cần API key của nhà cung cấp tương thích OpenAI và có thể phát sinh chi phí theo mức sử dụng. Kết quả AI chỉ là bản nháp/ước lượng, cần con người rà soát. Không gửi dữ liệu cá nhân nhạy cảm.

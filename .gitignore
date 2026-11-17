@@ -10,3 +10,4 @@ tests/test-evidence/*
 !tests/test-evidence/.gitkeep
 demo/videos/*
 !demo/videos/.gitkeep
+*.tsbuildinfo

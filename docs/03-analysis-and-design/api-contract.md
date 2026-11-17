@@ -103,3 +103,31 @@ Mã lỗi chung: 400 dữ liệu sai / tham chiếu không tồn tại, 401 chư
 ## Mã QR vé
 
 `Ticket.qrCode` có dạng `SE1.<ticketId>.<HMAC-SHA256>` ký bằng `TICKET_QR_SECRET` (`apps/api/src/tickets/ticket-code.ts`). Mã giả hoặc bị sửa trả `INVALID_CODE`; check-in dùng cập nhật có điều kiện nên một vé chỉ được chấp nhận một lần kể cả khi nhiều máy quét cùng lúc. Mọi lượt quét (kể cả bị từ chối) được ghi vào `CheckInAttempt`.
+
+## Ban tổ chức theo sự kiện
+
+Ban tổ chức (ORGANIZER) chỉ thao tác được trên sự kiện mình là thành viên; ADMIN được phép ở mọi sự kiện. Kiểm tra bằng `EventMemberGuard` (`apps/api/src/auth/event-access.ts`), sai vai trò trả 403.
+
+| Method | Endpoint | Vai trò trong sự kiện | Mục đích |
+|---|---|---|---|
+| GET | `/me/event-memberships` | (ORGANIZER) | Sự kiện mình là thành viên kèm vai trò |
+| PATCH | `/events/:id` | OWNER, CO_ORGANIZER | Sửa thông tin (không sửa sự kiện đã huỷ / kết thúc; sức chứa ≥ số đăng ký; `null` = xoá mô tả / địa điểm / bỏ giới hạn sức chứa) |
+| PATCH | `/events/:id/status` `{ status }` | OWNER, CO_ORGANIZER (huỷ: chỉ OWNER) | DRAFT→PUBLISHED (chưa kết thúc), PUBLISHED→DRAFT (chưa có đăng ký), PUBLISHED→COMPLETED (sau giờ kết thúc), DRAFT/PUBLISHED→CANCELLED |
+| GET/POST/PATCH/DELETE | `/events/:eventId/schedules[/:id]` | OWNER, CO_ORGANIZER | Lịch trình: `{ title, startsAt, endsAt, room?, description?, speakerIds? }`; phiên phải nằm trong thời gian sự kiện, diễn giả phải cùng sự kiện; `speakerIds` khi sửa thay toàn bộ |
+| GET/POST/PATCH/DELETE | `/events/:eventId/speakers[/:id]` | OWNER, CO_ORGANIZER | Diễn giả: `{ fullName, title?, organization?, bio?, email?, avatarUrl? }`; email chỉ ban tổ chức thấy, `GET /events/:id` công khai không trả email |
+| GET | `/events/:eventId/members` | OWNER, CO_ORGANIZER, CHECKIN_STAFF | Danh sách ban tổ chức |
+| POST | `/events/:eventId/members` `{ email, role }` | OWNER | Thêm thành viên (tài khoản phải có quyền ORGANIZER; chỉ ADMIN gán OWNER) |
+| PATCH | `/events/:eventId/members/:userId` `{ role }` | OWNER | Đổi vai trò (không đổi OWNER, trừ ADMIN) |
+| DELETE | `/events/:eventId/members/:userId` | OWNER | Gỡ thành viên (sự kiện luôn còn ít nhất một OWNER) |
+
+Áp dụng cho API có sẵn:
+
+| API | Vai trò được phép |
+|---|---|
+| `POST /check-in`, `GET /check-in/events/:eventId/stats` | OWNER, CO_ORGANIZER, CHECKIN_STAFF |
+| `/resources/sponsors`, `staff-assignments`, `budget-items`, `expenses`, `budget-summary` | OWNER, CO_ORGANIZER |
+| AI theo sự kiện (`check-in-analysis`, `events/:eventId/feedback-insights`) | OWNER, CO_ORGANIZER |
+| `GET /audit-logs?eventId=` | OWNER, CO_ORGANIZER |
+| Xem / huỷ đăng ký của người khác | OWNER, CO_ORGANIZER (người tham dự chỉ xem / huỷ đăng ký của mình) |
+
+`GET /events` đọc token nếu có: ADMIN nhận mọi sự kiện, ORGANIZER chỉ nhận sự kiện mình thuộc (kèm `myRole`), khách và người tham dự không thấy bản nháp. `POST /events` đặt người tạo làm OWNER. `/resources/staff` và `/resources/vendors` là danh bạ dùng chung, chỉ cần quyền ORGANIZER.
