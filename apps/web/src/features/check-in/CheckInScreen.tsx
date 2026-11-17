@@ -9,6 +9,7 @@ import { api, ApiError } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import type { EventSummary } from "@/types/event";
 import { EVENT_MEMBER_ROLE_LABELS } from "@/types/eventMember";
+import { CameraScanner } from "./CameraScanner";
 
 type CheckInResult = "ACCEPTED" | "DUPLICATE" | "INVALID_CODE" | "WRONG_EVENT" | "NOT_ELIGIBLE";
 type Method = "QR" | "NFC";
@@ -68,32 +69,48 @@ export function CheckInScreen() {
   const [method, setMethod] = useState<Method>("QR");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  /** Ref song song với busy để camera (gọi từ vòng lặp đọc khung hình) không gửi chồng lượt quét. */
+  const busyRef = useRef(false);
+  const [camera, setCamera] = useState(false);
   const [error, setError] = useState("");
   const [log, setLog] = useState<ScanLog[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const seq = useRef(0);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [eventId, method]);
+    // Đang dùng camera thì không giành focus (trên điện thoại sẽ bật bàn phím che camera).
+    if (!camera) inputRef.current?.focus();
+  }, [eventId, method, camera]);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const value = code.trim();
-    if (!value || !eventId || busy) return;
+  // Camera chỉ dùng cho mã QR.
+  useEffect(() => {
+    if (method !== "QR") setCamera(false);
+  }, [method]);
+
+  /** Gửi một lượt quét – dùng chung cho ô nhập / máy quét bàn phím và camera. */
+  async function submitCode(raw: string, scanMethod: Method) {
+    const value = raw.trim();
+    if (!value || !eventId || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     setError("");
     try {
-      const res = await api.post<CheckInResponse>("/check-in", { eventId, code: value, method });
+      const res = await api.post<CheckInResponse>("/check-in", { eventId, code: value, method: scanMethod });
       seq.current += 1;
-      setLog((items) => [{ ...res, id: seq.current, at: new Date(), method }, ...items].slice(0, 10));
+      setLog((items) => [{ ...res, id: seq.current, at: new Date(), method: scanMethod }, ...items].slice(0, 10));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Không gửi được lượt quét.");
     } finally {
-      setCode("");
+      busyRef.current = false;
       setBusy(false);
-      inputRef.current?.focus();
     }
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await submitCode(code, method);
+    setCode("");
+    if (!camera) inputRef.current?.focus();
   }
 
   const latest = log[0];
@@ -152,9 +169,18 @@ export function CheckInScreen() {
             </p>
           )}
 
+          {method === "QR" && (
+            <div className="camera-toggle">
+              <button type="button" className={camera ? "button button-ghost" : "button"} onClick={() => setCamera((v) => !v)}>
+                {camera ? "Tắt camera" : "Quét bằng camera"}
+              </button>
+            </div>
+          )}
+          {camera && method === "QR" && <CameraScanner paused={busy} onDetect={(value) => submitCode(value, "QR")} />}
+
           <form className="scan-form" onSubmit={handleSubmit}>
             <label className="field scan-field">
-              <span>{method === "QR" ? "Quét QR hoặc dán mã vé" : "Chạm thẻ NFC hoặc nhập UID"}</span>
+              <span>{method === "QR" ? (camera ? "Hoặc nhập / dán mã vé" : "Quét QR hoặc dán mã vé") : "Chạm thẻ NFC hoặc nhập UID"}</span>
               <input
                 ref={inputRef}
                 value={code}

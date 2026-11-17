@@ -404,3 +404,24 @@ a.compact-item:hover { border-color: var(--primary); }
 .variance-under { color: var(--success); font-weight: 700; }
 .pill-assign-confirmed, .pill-assign-completed { background: var(--success-soft); color: var(--success); }
 .pill-assign-declined { background: var(--danger-soft); color: var(--danger); }
+
+/* ---------- Quét QR bằng camera ---------- */
+.camera-toggle { display: flex; }
+.camera { display: flex; flex-direction: column; gap: 8px; max-width: 480px; }
+.camera-view {
+  position: relative; aspect-ratio: 4 / 3; background: #0b1220; border-radius: var(--radius); overflow: hidden;
+  border: 3px solid transparent; transition: border-color .15s;
+}
+.camera-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.camera-flash { border-color: var(--success); }
+.camera-frame {
+  position: absolute; inset: 15% 22%; border: 3px solid rgba(255, 255, 255, .9); border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(11, 18, 32, .35); pointer-events: none;
+}
+.camera-overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center;
+  color: #fff; background: rgba(11, 18, 32, .6); font-weight: 600;
+}
+.camera-overlay-error { background: rgba(11, 18, 32, .85); }
+.camera-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 640px) { .camera { max-width: none; } }
