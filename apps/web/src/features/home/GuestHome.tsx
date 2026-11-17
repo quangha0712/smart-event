@@ -6,7 +6,7 @@ import { useApi } from "@/lib/useApi";
 import type { EventSummary } from "@/types/event";
 import { Empty, EventRow, HomeHeader, SectionTitle } from "./parts";
 
-/** Khách chưa đăng nhập: giới thiệu một dòng + sự kiện sắp diễn ra + kêu gọi đăng nhập. */
+/** Khách chưa đăng nhập: giới thiệu một dòng + sự kiện sắp diễn ra (đăng nhập qua nút trên thanh menu). */
 export function GuestHome() {
   const { data, error, loading } = useApi((signal) => api.get<EventSummary[]>("/events", { auth: false, signal }));
   const upcoming = (data ?? [])
@@ -18,12 +18,6 @@ export function GuestHome() {
       <HomeHeader
         title="Smart Event – quản lý sự kiện thông minh"
         subtitle="Đăng ký tham dự, nhận vé QR và check-in chỉ trong vài giây."
-        actions={
-          <>
-            <Link className="button" href="/login">Đăng nhập</Link>
-            <Link className="button button-ghost" href="/events">Xem tất cả sự kiện</Link>
-          </>
-        }
       />
       <SectionTitle title="Sự kiện sắp diễn ra" link={{ href: "/events", label: "Xem tất cả" }} />
       {loading && <div className="skeleton-list" aria-busy="true" />}
