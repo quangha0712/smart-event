@@ -39,10 +39,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {status === "loading" ? null : user ? (
               <UserMenu />
             ) : (
-              pathname !== "/login" && (
-                <Link className="button" href={`/login?next=${encodeURIComponent(pathname)}`}>
-                  Đăng nhập
-                </Link>
+              pathname !== "/login" &&
+              pathname !== "/register" && (
+                <>
+                  <Link className="button button-ghost" href={`/register?next=${encodeURIComponent(pathname)}`}>
+                    Đăng ký
+                  </Link>
+                  <Link className="button" href={`/login?next=${encodeURIComponent(pathname)}`}>
+                    Đăng nhập
+                  </Link>
+                </>
               )
             )}
           </div>

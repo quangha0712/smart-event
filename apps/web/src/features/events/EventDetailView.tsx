@@ -131,9 +131,14 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
   else if (started) body = <p className="muted">Sự kiện đã bắt đầu, không nhận đăng ký mới.</p>;
   else if (!user)
     body = (
-      <Link className="button button-block" href={`/login?next=${encodeURIComponent(`/events/${event.id}`)}`}>
-        Đăng nhập để đăng ký
-      </Link>
+      <>
+        <Link className="button button-block" href={`/login?next=${encodeURIComponent(`/events/${event.id}`)}`}>
+          Đăng nhập để đăng ký
+        </Link>
+        <p className="muted small">
+          Chưa có tài khoản? <Link href={`/register?next=${encodeURIComponent(`/events/${event.id}`)}`}>Tạo tài khoản</Link>
+        </p>
+      </>
     );
   else if (isAttendee)
     body = (

@@ -425,3 +425,8 @@ a.compact-item:hover { border-color: var(--primary); }
 .camera-overlay-error { background: rgba(11, 18, 32, .85); }
 .camera-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 640px) { .camera { max-width: none; } }
+
+/* ---------- Đăng ký ---------- */
+.auth-switch { margin: 20px 0 0; text-align: center; font-size: 14px; color: var(--muted); }
+.checkbox { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; width: fit-content; }
+.checkbox input { width: 16px; height: 16px; accent-color: var(--primary); }

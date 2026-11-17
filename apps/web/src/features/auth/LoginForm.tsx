@@ -1,21 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
-import { canAccess } from "@/lib/navigation";
-import type { AuthUser } from "@/types/auth";
-import { homePathFor, useAuth } from "./AuthProvider";
-
-/** Chỉ cho phép quay về đường dẫn nội bộ, tránh open redirect kiểu ?next=https://... hoặc //evil.com. */
-function safeNext(next: string | null) {
-  return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : null;
-}
-
-/** Trang đích sau đăng nhập: về `next` nếu tài khoản có quyền mở trang đó, ngược lại về trang chủ. */
-function destinationFor(user: AuthUser, next: string | null) {
-  return next && canAccess(user, next) ? next : homePathFor(user);
-}
+import { useAuth } from "./AuthProvider";
+import { destinationFor, safeNext, withNext } from "./redirect";
 
 const DEMO_ACCOUNTS = [
   "admin@example.com",
@@ -91,6 +81,10 @@ export function LoginForm() {
           {submitting ? "Đang đăng nhập…" : "Đăng nhập"}
         </button>
       </form>
+
+      <p className="auth-switch">
+        Chưa có tài khoản? <Link href={withNext("/register", next)}>Đăng ký</Link>
+      </p>
 
       {process.env.NODE_ENV !== "production" && (
         <details className="demo-accounts">
