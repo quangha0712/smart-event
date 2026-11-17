@@ -26,7 +26,7 @@ const ADMIN_ROLES: EventMemberRole[] = ["OWNER", ...INVITABLE_ROLES];
  *   PATCH  /events/:eventId/members/:userId   { role }
  *   DELETE /events/:eventId/members/:userId
  */
-export function EventMembersPanel({ eventId }: { eventId: string }) {
+export function EventMembersPanel({ eventId, justCreated = false }: { eventId: string; justCreated?: boolean }) {
   const { user } = useAuth();
   const access = useEventAccess();
   const canManage = access.can(eventId, "manageMembers");
@@ -83,6 +83,11 @@ export function EventMembersPanel({ eventId }: { eventId: string }) {
       <span className="eyebrow">BAN TỔ CHỨC</span>
       <h1 className="page-title">Thành viên ban tổ chức</h1>
       <p className="muted">{event.data ? event.data.name : event.loading ? "Đang tải sự kiện…" : ""}</p>
+      {justCreated && (
+        <p className="notice-ok" role="status">
+          Đã tạo sự kiện (Bản nháp). Bạn là Chủ sự kiện – thêm Đồng tổ chức và Nhân viên check-in bên dưới.
+        </p>
+      )}
 
       <ul className="role-legend">
         {(Object.keys(EVENT_MEMBER_ROLE_LABELS) as EventMemberRole[]).map((r) => (

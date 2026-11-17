@@ -22,6 +22,8 @@ type EventAccessValue = {
   /** Ban tổ chức chỉ thấy sự kiện mình là thành viên; ADMIN, người tham dự, khách thấy nguyên danh sách. */
   filterEvents: <T extends { id: string }>(events: T[]) => T[];
   reload: () => void;
+  /** Ghi nhận ngay một vai trò mới (vd vừa tạo sự kiện → OWNER) mà không chờ tải lại từ API. */
+  remember: (membership: MyEventMembership) => void;
 };
 
 const EventAccessContext = createContext<EventAccessValue | null>(null);
@@ -35,6 +37,10 @@ export function EventAccessProvider({ children }: { children: React.ReactNode })
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
+  const remember = useCallback(
+    (m: MyEventMembership) => setMemberships((list) => [...list.filter((x) => x.eventId !== m.eventId), m]),
+    [],
+  );
 
   useEffect(() => {
     setMemberships([]);
@@ -81,8 +87,9 @@ export function EventAccessProvider({ children }: { children: React.ReactNode })
         isOrganizer && supported && memberships.length > 0 && memberships.every((m) => m.role === "CHECKIN_STAFF"),
       filterEvents: (events) => (isOrganizer && supported ? events.filter((e) => byEvent.has(e.id)) : events),
       reload,
+      remember,
     };
-  }, [authStatus, loading, supported, error, memberships, isOrganizer, user, reload]);
+  }, [authStatus, loading, supported, error, memberships, isOrganizer, user, reload, remember]);
 
   return <EventAccessContext.Provider value={value}>{children}</EventAccessContext.Provider>;
 }

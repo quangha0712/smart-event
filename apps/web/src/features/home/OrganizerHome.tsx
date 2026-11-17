@@ -70,7 +70,7 @@ export function OrganizerHome() {
         subtitle={formatLongDate()}
         actions={
           <>
-            <Link className="button" href="/events">+ Tạo sự kiện</Link>
+            <Link className="button" href="/events/new">+ Tạo sự kiện</Link>
             {access.canAny("checkIn") && <Link className="button button-ghost" href="/check-in">Check-in</Link>}
           </>
         }
@@ -92,7 +92,7 @@ export function OrganizerHome() {
       {!loading && upcoming.length === 0 && (
         <Empty title={access.supported ? "Bạn chưa thuộc sự kiện sắp tới nào." : "Chưa có sự kiện sắp tới."}>
           <span className="muted small">Tạo sự kiện mới (bạn sẽ là Chủ sự kiện) hoặc nhờ Chủ sự kiện thêm bạn vào ban tổ chức.</span>
-          <Link className="button" href="/events">Tạo sự kiện</Link>
+          <Link className="button" href="/events/new">Tạo sự kiện</Link>
         </Empty>
       )}
       <div className="event-list">

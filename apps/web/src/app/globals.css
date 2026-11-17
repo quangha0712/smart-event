@@ -300,3 +300,26 @@ a.compact-item:hover { border-color: var(--primary); }
 .scan-pill-ok { background: var(--success-soft); color: var(--success); }
 .scan-pill-warn { background: #fffaeb; color: var(--warning); }
 .scan-pill-bad { background: var(--danger-soft); color: var(--danger); }
+
+/* ---------- Form tạo sự kiện ---------- */
+.form-card { max-width: 720px; margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+.field textarea {
+  font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface); color: var(--text); width: 100%; resize: vertical; min-height: 96px;
+}
+.field textarea:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+.field [aria-invalid="true"] { border-color: var(--danger); }
+.field-error { color: var(--danger); font-size: 13px; font-weight: 400; }
+.field-narrow { max-width: 260px; }
+.required { color: var(--danger); }
+.form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .form-card { padding: 16px; }
+  .form-row { grid-template-columns: 1fr; }
+  .field-narrow { max-width: none; }
+  .form-actions .button { flex: 1; }
+}
+
+/* Tiêu đề trang kèm nút hành động bên phải (vd "Sự kiện" + "Tạo sự kiện"). */
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
