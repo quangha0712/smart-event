@@ -47,7 +47,7 @@ export function LoginForm() {
   return (
     <section className="auth-card" aria-labelledby="login-title">
       <h1 id="login-title">Đăng nhập</h1>
-      <p className="muted">Dùng tài khoản ban tổ chức để quản lý sự kiện, check-in và nguồn lực.</p>
+      <p className="muted">Đăng nhập để tiếp tục với tài khoản Smart Event của bạn.</p>
 
       <form onSubmit={handleSubmit} className="form" noValidate>
         <label className="field">

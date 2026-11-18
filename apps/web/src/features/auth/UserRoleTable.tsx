@@ -12,6 +12,7 @@ export function UserRoleTable() {
   const { user: me } = useAuth();
   const [users, setUsers] = useState<AuthUser[] | null>(null);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,10 +28,12 @@ export function UserRoleTable() {
 
   async function changeRole(id: string, role: UserRole) {
     setError("");
+    setSuccess("");
     setSavingId(id);
     try {
       const updated = await api.patch<AuthUser>(`/auth/users/${encodeURIComponent(id)}/role`, { role });
       setUsers((list) => list?.map((u) => (u.id === id ? updated : u)) ?? null);
+      setSuccess(`Đã cập nhật quyền cho ${updated.fullName}.`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Không đổi được quyền.");
     } finally {
@@ -38,7 +41,7 @@ export function UserRoleTable() {
     }
   }
 
-  if (!users && !error) return <div className="state">Đang tải…</div>;
+  if (!users && !error) return <div className="state" role="status">Đang tải…</div>;
 
   return (
     <>
@@ -47,7 +50,9 @@ export function UserRoleTable() {
           {error}
         </p>
       )}
-      {users && (
+      {success && <p className="state-success" role="status">{success}</p>}
+      {users?.length === 0 && <p className="placeholder">Chưa có người dùng nào.</p>}
+      {users && users.length > 0 && (
         <div className="table-wrap">
           <table className="table">
             <thead>

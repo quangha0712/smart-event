@@ -10,4 +10,10 @@ tests/test-evidence/*
 !tests/test-evidence/.gitkeep
 demo/videos/*
 !demo/videos/.gitkeep
+
+LOG-THANH-VIEN-5.md
+TASKS-THANH-VIEN-5.md
+skills-lock.json
+.agents/
+.claude/
 *.tsbuildinfo

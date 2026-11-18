@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Đăng nhập · Smart Event" };
 export default function LoginPage() {
   // LoginForm đọc ?next= bằng useSearchParams nên cần Suspense để Next build tĩnh được trang.
   return (
-    <Suspense fallback={<div className="state">Đang tải…</div>}>
+    <Suspense fallback={<div className="state" role="status">Đang tải…</div>}>
       <LoginForm />
     </Suspense>
   );
