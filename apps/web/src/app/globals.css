@@ -587,3 +587,11 @@ a.compact-item:hover { border-color: var(--primary); }
 @keyframes camera-result-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .camera-result { animation: none; } }
 .field input:disabled, .field textarea:disabled, select:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
+
+/* Màn kiểm tra gian lận vé */
+.fraud-result { margin-top: 24px; }
+.fraud-result h2 { margin: 0 0 4px; font-size: 20px; }
+.fraud-result .table-wrap { margin-top: 16px; }
+.fraud-table td { white-space: normal; vertical-align: top; line-height: 1.55; min-width: 220px; }
+.fraud-table td:first-child { min-width: 180px; }
+.fraud-table ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
