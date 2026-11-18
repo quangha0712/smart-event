@@ -49,7 +49,7 @@ code { color: var(--text); overflow-wrap: anywhere; }
 }
 .brand-mark {
   display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px;
-  background: var(--button); color: #fff; font-size: 18px;
+  background: var(--button); color: #fff; font-size: 13px; font-weight: 700; letter-spacing: 0;
 }
 .nav { display: flex; gap: 4px; flex: 1 1 280px; min-width: 0; overflow-x: auto; }
 .nav-link {
@@ -201,8 +201,6 @@ h1 { margin: 16px 0; font-size: clamp(32px, 6vw, 56px); line-height: 1.12; lette
 :root { --success: #067647; --success-soft: #ecfdf3; --live: #d92d20; --shadow: 0 1px 2px #1720330d, 0 4px 12px #1720330a; }
 .small { font-size: 13px; }
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
-.brand { display: inline-flex; align-items: center; gap: 8px; }
-.brand-mark { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #fff; font-size: 12px; font-weight: 800; }
 
 /* ---------- User menu ---------- */
 .user-menu { position: relative; }
@@ -297,6 +295,7 @@ a.compact-item:hover { border-color: var(--primary); }
 .live-card { padding: 20px; background: var(--surface); border: 1px solid #fecdca; border-radius: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
 .live-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .live-head h2 { margin: 0; font-size: 18px; flex: 1; }
+.next-event .eyebrow, .live-head .eyebrow { font-size: 13px; font-weight: 600; color: var(--muted); }
 .live-head .eyebrow { color: var(--live); }
 .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 4px #fee4e2; animation: pulse 1.6s infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 8px #fee4e200; } }
