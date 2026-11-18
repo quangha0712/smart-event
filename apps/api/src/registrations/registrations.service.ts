@@ -81,6 +81,26 @@ export class RegistrationsService {
     }
   }
 
+  async listForUser(userId: string) {
+    const rows = await this.prisma.registration.findMany({
+      where: { userId },
+      orderBy: { event: { startsAt: "asc" } },
+      include: {
+        ticket: true,
+        event: { select: { id: true, name: true, startsAt: true, endsAt: true, location: true, status: true } },
+      },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      createdAt: r.createdAt,
+      event: r.event,
+      ticket: r.ticket
+        ? { id: r.ticket.id, qrPayload: r.status === "CONFIRMED" ? r.ticket.qrCode : null, checkedInAt: r.ticket.checkedInAt }
+        : null,
+    }));
+  }
+
   async getOne(eventId: string, registrationId: string) {
     const registration = await this.prisma.registration.findFirst({
       where: { id: registrationId, eventId },

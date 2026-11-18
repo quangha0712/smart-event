@@ -1,13 +1,17 @@
-import { PagePlaceholder } from "@/components/PagePlaceholder";
+import { Suspense } from "react";
+import { CheckInScreen } from "@/features/check-in/CheckInScreen";
 import { RequireAuth } from "@/features/auth/RequireAuth";
+import { RequireEventAccess } from "@/features/events/RequireEventAccess";
 
-export default function Page() {
+export default function CheckInPage() {
   return (
     <RequireAuth roles={["ORGANIZER"]}>
-      <PagePlaceholder
-        title="Check-in vé"
-        description="Quét QR / NFC tại cổng, ghi nhận tham dự một lần và theo dõi lượt quét."
-      />
+      <RequireEventAccess capability="checkIn">
+        {/* CheckInScreen đọc ?eventId= bằng useSearchParams nên cần Suspense. */}
+        <Suspense fallback={<div className="state">Đang tải…</div>}>
+          <CheckInScreen />
+        </Suspense>
+      </RequireEventAccess>
     </RequireAuth>
   );
 }

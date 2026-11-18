@@ -44,6 +44,7 @@ enum CheckInResult {
   INVALID_CODE // không tìm thấy vé ứng với mã quét
   WRONG_EVENT // vé thuộc sự kiện khác
   NOT_ELIGIBLE // đăng ký bị huỷ hoặc chưa xác nhận
+  OUT_OF_HOURS // ngoài giờ check-in (trước giờ mở cổng hoặc sau khi sự kiện kết thúc)
 }
 
 enum DeviceType {
@@ -91,8 +92,36 @@ model User {
   operatedCheckIns    CheckInAttempt[]
   recordedExpenses    Expense[]
   approvedBudgetItems BudgetItem[]
+  createdEvents       Event[]          @relation("EventCreatedBy")
+  eventMemberships    EventMember[]    @relation("EventMemberUser")
+  invitedMembers      EventMember[]    @relation("EventMemberInvitedBy")
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
+}
+
+/// Vai trò của một người trong MỘT sự kiện (khác quyền hệ thống UserRole).
+/// Ma trận quyền: apps/api/src/auth/event-access.ts (FE: apps/web/src/lib/eventPermissions.ts).
+enum EventMemberRole {
+  OWNER // Chủ sự kiện: người tạo, toàn quyền, mời / đổi vai trò / gỡ thành viên
+  CO_ORGANIZER // Đồng tổ chức: nội dung, nguồn lực, ngân sách, check-in, AI, audit log
+  CHECKIN_STAFF // Nhân viên check-in: chỉ quét vé
+}
+
+/// Thành viên ban tổ chức của một sự kiện. Mỗi người có đúng một vai trò trong một sự kiện.
+model EventMember {
+  eventId     String
+  userId      String
+  role        EventMemberRole
+  invitedById String?
+  event       Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User            @relation("EventMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy   User?           @relation("EventMemberInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@id([eventId, userId])
+  @@index([userId])
+  @@index([invitedById])
 }
 
 model Event {
@@ -104,6 +133,10 @@ model Event {
   endsAt           DateTime
   capacity         Int?
   status           EventStatus       @default(DRAFT)
+  /// Người tạo sự kiện; null với dữ liệu cũ hoặc khi tài khoản người tạo bị xoá.
+  createdById      String?
+  createdBy        User?             @relation("EventCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  members          EventMember[]
   schedules        ScheduleItem[]
   registrations    Registration[]
   feedback         EventFeedback[]
@@ -119,6 +152,7 @@ model Event {
   updatedAt        DateTime          @updatedAt
 
   @@index([status, startsAt])
+  @@index([createdById])
 }
 
 model ScheduleItem {

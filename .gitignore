@@ -16,3 +16,4 @@ TASKS-THANH-VIEN-5.md
 skills-lock.json
 .agents/
 .claude/
+*.tsbuildinfo

@@ -2,10 +2,13 @@ import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/com
 import { UserRole } from "@prisma/client";
 import { ApiTags } from "@nestjs/swagger";
 import { AuthUser, CurrentUser, Roles } from "../auth/auth.decorators";
+import { EVENT_ROLES, EventRoles } from "../auth/event-access";
 import { CheckInDto, CheckInStatsQuery } from "./check-in.dto";
 import { CheckInService } from "./check-in.service";
 
+/** Chỉ thành viên ban tổ chức của sự kiện (eventId trong body hoặc đường dẫn) được check-in / xem số liệu. */
 @Roles(UserRole.ORGANIZER)
+@EventRoles(EVENT_ROLES.ALL)
 @Controller("check-in")
 @ApiTags("Check-in")
 export class CheckInController {

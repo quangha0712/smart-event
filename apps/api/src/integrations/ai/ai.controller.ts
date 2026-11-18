@@ -2,6 +2,7 @@ import { BadRequestException, Body, Controller, Param, Post } from "@nestjs/comm
 import { ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
 import { Roles } from "../../auth/auth.decorators";
+import { EVENT_ROLES, EventRoles } from "../../auth/event-access";
 import { CheckInService } from "../../check-in/check-in.service";
 import { PrismaService } from "../../prisma/prisma.module";
 import { AiService } from "./ai.service";
@@ -13,6 +14,7 @@ import {
   RequirementsDraftInput,
 } from "./ai.types";
 
+/** Endpoint gắn sự kiện chỉ cho Chủ sự kiện / Đồng tổ chức của sự kiện đó; endpoint chung chỉ cần quyền Ban tổ chức. */
 @Roles(UserRole.ORGANIZER)
 @Controller("ai")
 @ApiTags("AI")
@@ -38,6 +40,7 @@ export class AiController {
     return this.ai.budgetEstimate(body);
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS)
   @Post("check-in-analysis")
   async checkInAnalysis(@Body() body: CheckInAnalysisRequest) {
     const from = new Date(body.from);
@@ -61,6 +64,7 @@ export class AiController {
     });
   }
 
+  @EventRoles(EVENT_ROLES.MANAGERS)
   @Post("events/:eventId/feedback-insights")
   async feedbackInsights(@Param("eventId") eventId: string) {
     const feedback = await this.prisma.eventFeedback.findMany({

@@ -10,7 +10,18 @@ const MESSAGES: Record<CheckInResult, string> = {
   INVALID_CODE: "Mã vé không hợp lệ",
   WRONG_EVENT: "Vé không thuộc sự kiện này",
   NOT_ELIGIBLE: "Đăng ký chưa được xác nhận hoặc đã huỷ",
+  OUT_OF_HOURS: "Ngoài giờ check-in",
 };
+
+/** Cổng check-in mở trước giờ bắt đầu sự kiện bấy nhiêu phút (đổi bằng CHECKIN_OPEN_BEFORE_MINUTES). */
+export const CHECKIN_OPEN_BEFORE_MINUTES = Number(process.env.CHECKIN_OPEN_BEFORE_MINUTES ?? 120);
+
+const vnTime = new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
+
+/** Khoảng được phép check-in: từ (bắt đầu − N phút) đến khi sự kiện kết thúc. */
+export function checkInWindow(event: { startsAt: Date; endsAt: Date }) {
+  return { opensAt: new Date(event.startsAt.getTime() - CHECKIN_OPEN_BEFORE_MINUTES * 60_000), closesAt: event.endsAt };
+}
 
 @Injectable()
 export class CheckInService {
@@ -18,7 +29,8 @@ export class CheckInService {
 
   /** Xử lý một lượt quét và luôn ghi lại CheckInAttempt, kể cả lượt bị từ chối. */
   async checkIn(dto: CheckInDto, operatorId: string) {
-    await this.prisma.event.findUniqueOrThrow({ where: { id: dto.eventId }, select: { id: true } });
+    const event = await this.prisma.event.findUniqueOrThrow({ where: { id: dto.eventId }, select: { startsAt: true, endsAt: true } });
+    const window = checkInWindow(event);
     const method = dto.method ?? CheckInMethod.QR;
     const code = dto.code.trim();
 
@@ -29,6 +41,8 @@ export class CheckInService {
     const ticket = await this.findTicket(method, code);
     let result: CheckInResult;
     let checkedInAt: Date | null = ticket?.checkedInAt ?? null;
+    let message: string | null = null;
+    const now = new Date();
 
     if (!ticket) {
       result = CheckInResult.INVALID_CODE;
@@ -36,9 +50,18 @@ export class CheckInService {
       result = CheckInResult.WRONG_EVENT;
     } else if (ticket.registration.status !== RegistrationStatus.CONFIRMED) {
       result = CheckInResult.NOT_ELIGIBLE;
+    } else if (ticket.checkedInAt) {
+      // Đã check-in thì báo trùng (hữu ích hơn "ngoài giờ"), kể cả khi quét ngoài giờ.
+      result = CheckInResult.DUPLICATE;
+    } else if (now < window.opensAt || now > window.closesAt) {
+      // Ngoài giờ: không đánh dấu vé, chỉ ghi lại lượt quét.
+      result = CheckInResult.OUT_OF_HOURS;
+      message =
+        now < window.opensAt
+          ? `Chưa tới giờ check-in – cổng mở lúc ${vnTime.format(window.opensAt)}`
+          : `Sự kiện đã kết thúc lúc ${vnTime.format(window.closesAt)}`;
     } else {
       // Cập nhật có điều kiện để hai máy quét cùng lúc không thể cùng check-in một vé.
-      const now = new Date();
       const { count } = await this.prisma.ticket.updateMany({
         where: { id: ticket.id, checkedInAt: null },
         data: { checkedInAt: now },
@@ -64,8 +87,9 @@ export class CheckInService {
     return {
       result,
       accepted: result === CheckInResult.ACCEPTED,
-      message: MESSAGES[result],
+      message: message ?? MESSAGES[result],
       checkedInAt,
+      checkInWindow: window,
       attendee: ticket && result !== CheckInResult.INVALID_CODE ? { fullName: ticket.registration.user.fullName } : null,
     };
   }
@@ -93,7 +117,7 @@ export class CheckInService {
       accepted: count(CheckInResult.ACCEPTED),
       repeatedScans: count(CheckInResult.DUPLICATE),
       invalidCodes: count(CheckInResult.INVALID_CODE) + count(CheckInResult.WRONG_EVENT),
-      notEligible: count(CheckInResult.NOT_ELIGIBLE),
+      notEligible: count(CheckInResult.NOT_ELIGIBLE) + count(CheckInResult.OUT_OF_HOURS),
       windowMinutes: windowMinutes ?? spanMinutes,
     };
   }
@@ -163,7 +187,7 @@ export class CheckInService {
             ? "ACCEPTED" as const
             : attempt.result === CheckInResult.DUPLICATE
               ? "ALREADY_USED" as const
-              : attempt.result === CheckInResult.NOT_ELIGIBLE
+              : attempt.result === CheckInResult.NOT_ELIGIBLE || attempt.result === CheckInResult.OUT_OF_HOURS
                 ? "NOT_ELIGIBLE" as const
                 : "INVALID" as const,
           deviceId: attempt.device?.code ?? "legacy-unknown",

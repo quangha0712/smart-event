@@ -1,8 +1,14 @@
 import { BadRequestException, Controller, Get, NotFoundException, Query } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import { UserRole } from "@prisma/client";
+import { Roles } from "../auth/auth.decorators";
+import { EVENT_ROLES, EventRoles } from "../auth/event-access";
 import { PrismaService } from "../prisma/prisma.module";
 import { AuditLogService } from "./audit-log.service";
 
+/** Chỉ Chủ sự kiện / Đồng tổ chức của sự kiện (?eventId=) và ADMIN được xem audit log. */
+@Roles(UserRole.ORGANIZER)
+@EventRoles(EVENT_ROLES.MANAGERS)
 @Controller("audit-logs")
 @ApiTags("Audit logs")
 export class AuditLogController {

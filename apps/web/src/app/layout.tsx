@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/features/auth/AuthProvider";
+import { EventAccessProvider } from "@/features/events/EventAccessProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="vi">
       <body>
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <EventAccessProvider>
+            <AppShell>{children}</AppShell>
+          </EventAccessProvider>
         </AuthProvider>
       </body>
     </html>
