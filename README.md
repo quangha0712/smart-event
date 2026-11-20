@@ -48,6 +48,8 @@ Script `infra/local-mysql/start.ps1` chạy một MySQL riêng bằng chính MyS
 3. Ở terminal khác: `npm run db:migrate`, `npm run db:seed`, `npm run dev`.
 4. Tắt: Ctrl+C hoặc `npm run db:local:stop`.
 
+Gộp thành một lệnh: `npm run dev:local` – tự bật MySQL local, đợi sẵn sàng, migrate + seed rồi chạy API và web; Ctrl+C tắt cả ba (MySQL chỉ bị tắt nếu do lệnh này bật).
+
 MySQL không nằm ở `C:\Program Files\MySQL`? Đặt biến môi trường `MYSQL_BIN` trỏ tới thư mục `bin` chứa `mysqld.exe`.
 Root của MySQL riêng này không có mật khẩu và chỉ nghe `127.0.0.1`, chỉ dùng cho máy phát triển.
 

@@ -83,7 +83,6 @@ function ActionPanel({ event, reloadEvent }: { event: EventDetail; reloadEvent: 
       { show: access.can(event.id, "manageResources"), href: `/resources?eventId=${id}&tab=sponsors`, label: "Tài trợ & nhà cung cấp" },
       { show: access.can(event.id, "checkIn"), href: `/check-in?eventId=${id}`, label: "Check-in" },
       { show: access.can(event.id, "useAi"), href: `/events/${id}/ai-insights`, label: "Phân tích AI" },
-      { show: access.can(event.id, "useAi"), href: `/events/${id}/fraud-check`, label: "Kiểm tra gian lận vé" },
     ].filter((l) => l.show);
     return (
       <aside className="detail-panel" aria-label="Quản lý sự kiện">

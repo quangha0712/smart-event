@@ -33,7 +33,6 @@ const EXTRA_PROTECTED: Array<{ pattern: RegExp; roles: UserRole[] }> = [
   { pattern: /^\/events\/[^/]+\/edit(\/|$)/, roles: ["ORGANIZER"] },
   { pattern: /^\/events\/[^/]+\/schedule(\/|$)/, roles: ["ORGANIZER"] },
   { pattern: /^\/events\/[^/]+\/ai-insights(\/|$)/, roles: ["ORGANIZER"] },
-  { pattern: /^\/events\/[^/]+\/fraud-check(\/|$)/, roles: ["ORGANIZER"] },
   { pattern: /^\/events\/[^/]+\/members(\/|$)/, roles: ["ORGANIZER"] },
 ];
 
