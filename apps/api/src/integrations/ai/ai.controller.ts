@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { UserRole } from "@prisma/client";
-import { Roles } from "../../auth/auth.decorators";
+import { Public, Roles } from "../../auth/auth.decorators";
 import { EVENT_ROLES, EventRoles } from "../../auth/event-access";
 import { CheckInService } from "../../check-in/check-in.service";
 import { PrismaService } from "../../prisma/prisma.module";
@@ -40,7 +40,9 @@ export class AiController {
     return this.ai.budgetEstimate(body);
   }
 
-  @EventRoles(EVENT_ROLES.MANAGERS)
+  // Tạm công khai để test API trên Swagger; bỏ @Public và bật lại @EventRoles khi test xong.
+  @Public()
+  // @EventRoles(EVENT_ROLES.MANAGERS)
   @Post("check-in-analysis")
   async checkInAnalysis(@Body() body: CheckInAnalysisRequest) {
     const from = new Date(body.from);
