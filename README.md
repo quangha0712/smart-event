@@ -28,7 +28,7 @@ Seed tạo ba vé khớp rule và ba vé đối chứng để kiểm tra check-i
 - `DEMO-QR-TWO-REPEATS-CONTROL`: chỉ có 2 lượt lặp dù dùng hai máy quét.
 - `DEMO-QR-NORMAL-CONTROL`: một lượt check-in thành công, không quét lặp.
 
-Log mẫu gắn với máy quét; chạy seed tạo tám mẫu dương tính (hai cho mỗi rule) và ba mẫu đối chứng. Seed in ra `from` và `to` để gọi API với đúng khoảng chứa dữ liệu. Frontend gửi `eventId`, `from`, `to`, ví dụ `POST /api/ai/check-in-analysis` với `{"eventId":"demo-smart-event","from":"<seed-from-ISO>","to":"<seed-to-ISO>"}`. Backend gửi log và prompt/rule cho LLM tự đánh giá; backend chỉ hậu kiểm theo log và các điều kiện confidence/evidence, không thay verdict của LLM. Timeout gọi LLM là 5 phút.
+Log mẫu gắn với máy quét; chạy seed tạo tám mẫu dương tính (hai cho mỗi rule) và ba mẫu đối chứng. Seed in ra `from` và `to` để gọi API với đúng khoảng chứa dữ liệu. Frontend gửi `eventId`, `from`, `to`, ví dụ `POST /api/ai/check-in-analysis` với `{"eventId":"demo-smart-event","from":"<seed-from-ISO>","to":"<seed-to-ISO>"}`. Backend gửi log và prompt/rule cho LLM tự đánh giá; trên luồng bình thường, backend hậu kiểm verdict/confidence/evidence với log. Endpoint này chờ LLM tối đa 10 giây; nếu quá thời gian hoặc provider trả HTTP 503, API trả response mẫu hardcode trong `apps/api/src/integrations/ai/check-in-analysis.timeout-fallback.ts` (gắn `generatedBy: "timeout-fallback-static"`). Response tĩnh chứa ticket ID, thời gian và kết luận demo cũ, không phản ánh dữ liệu của request hiện tại; chỉ dùng để demo giao diện. Các endpoint AI khác vẫn chờ tối đa 5 phút.
 
 Web: http://localhost:3000 · API health: http://localhost:3001/api/health · Swagger UI: http://localhost:3001/docs · OpenAPI JSON: http://localhost:3001/docs-json
 

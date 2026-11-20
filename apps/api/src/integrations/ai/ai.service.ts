@@ -10,6 +10,20 @@ import { REQUIREMENTS_DRAFT_PROMPT } from "./prompts/requirements-draft.prompt";
 import { BUDGET_ESTIMATE_PROMPT } from "./prompts/budget-estimate.prompt";
 import { CHECKIN_ANALYSIS_PROMPT } from "./prompts/checkin-analysis.prompt";
 import { FEEDBACK_INSIGHTS_PROMPT } from "./prompts/feedback-insights.prompt";
+import { createCheckInAnalysisTimeoutFallback } from "./check-in-analysis.timeout-fallback";
+
+class AiRequestTimeoutError extends Error {
+  constructor() {
+    super("AI request timed out");
+    this.name = "AiRequestTimeoutError";
+  }
+}
+
+class AiProviderHttpError extends BadGatewayException {
+  constructor(readonly providerStatus: number) {
+    super(`Dịch vụ AI trả về lỗi HTTP ${providerStatus}.`);
+  }
+}
 
 @Injectable()
 export class AiService {
@@ -58,8 +72,19 @@ export class AiService {
     };
   }
 
-  checkInAnalysis(input: CheckInAnalysisInput) {
-    return this.generateJson(CHECKIN_ANALYSIS_PROMPT, input).then((generated) => {
+  async checkInAnalysis(input: CheckInAnalysisInput) {
+    let generated: Awaited<ReturnType<AiService["generateJson"]>>;
+    try {
+      generated = await this.generateJson(CHECKIN_ANALYSIS_PROMPT, input, 10_000);
+    } catch (error) {
+      if (error instanceof AiRequestTimeoutError ||
+        (error instanceof AiProviderHttpError && error.providerStatus === 503)) {
+        return createCheckInAnalysisTimeoutFallback();
+      }
+      throw error;
+    }
+
+    return Promise.resolve(generated).then((generated) => {
       const result = generated.result as Record<string, unknown>;
       const anomalies = Array.isArray(result.anomalies) ? result.anomalies : [];
       const riskLevel = result.riskLevel;
@@ -254,13 +279,14 @@ export class AiService {
     return this.generateJson(FEEDBACK_INSIGHTS_PROMPT, anonymousFeedback);
   }
 
-  private async generateJson(systemPrompt: string, input: unknown) {
+  private async generateJson(systemPrompt: string, input: unknown, timeoutMs = 5 * 60_000) {
     const apiKey = process.env.AI_API_KEY;
     if (!apiKey) throw new ServiceUnavailableException("AI chưa được cấu hình. Hãy thiết lập AI_API_KEY.");
 
     const baseUrl = (process.env.AI_API_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
     const model = process.env.AI_MODEL || "gpt-4o-mini";
     let response: Response;
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
     try {
       response = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
@@ -274,14 +300,15 @@ export class AiService {
             { role: "user", content: JSON.stringify(input) },
           ],
         }),
-        signal: AbortSignal.timeout(5 * 60_000),
+        signal: timeoutSignal,
       });
     } catch {
+      if (timeoutSignal.aborted) throw new AiRequestTimeoutError();
       throw new ServiceUnavailableException("Không kết nối được dịch vụ AI hoặc yêu cầu đã hết thời gian.");
     }
 
     if (!response.ok) {
-      throw new BadGatewayException(`Dịch vụ AI trả về lỗi HTTP ${response.status}.`);
+      throw new AiProviderHttpError(response.status);
     }
 
     try {
