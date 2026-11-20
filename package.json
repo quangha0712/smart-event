@@ -9,6 +9,7 @@
     "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "node scripts/dev-bootstrap.mjs && npm --workspace apps/api run start:dev",
     "dev:web": "npm --workspace apps/web run dev",
+    "dev:local": "node scripts/dev-local.mjs",
     "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
     "db:up": "docker compose -f infra/docker-compose.yml up -d mysql",
     "db:down": "docker compose -f infra/docker-compose.yml down",

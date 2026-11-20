@@ -10,6 +10,7 @@ import { useApi } from "@/lib/useApi";
 import type { EventSummary } from "@/types/event";
 import { EVENT_MEMBER_ROLE_LABELS } from "@/types/eventMember";
 import { CameraScanner, type CameraFeedback } from "./CameraScanner";
+import { FraudCheckPanel } from "./FraudCheckPanel";
 
 type CheckInResult = "ACCEPTED" | "DUPLICATE" | "INVALID_CODE" | "WRONG_EVENT" | "NOT_ELIGIBLE" | "OUT_OF_HOURS";
 
@@ -77,6 +78,8 @@ export function CheckInScreen() {
   /** Ref song song với busy để camera (gọi từ vòng lặp đọc khung hình) không gửi chồng lượt quét. */
   const busyRef = useRef(false);
   const [camera, setCamera] = useState(false);
+  /** Mở bảng "Kiểm tra gian lận" (chỉ Chủ sự kiện / Đồng tổ chức – endpoint AI yêu cầu quyền useAi). */
+  const [fraudOpen, setFraudOpen] = useState(false);
   /** Kết quả lượt quét gần nhất để hiện đè lên camera. */
   const [cameraFeedback, setCameraFeedback] = useState<CameraFeedback | null>(null);
   const [error, setError] = useState("");
@@ -97,6 +100,7 @@ export function CheckInScreen() {
     setLog([]);
     setError("");
     setCameraFeedback(null);
+    setFraudOpen(false);
   }, [eventId]);
 
   useEffect(() => {
@@ -159,6 +163,7 @@ export function CheckInScreen() {
           : null
       : null;
   const closed = Boolean(outOfHours);
+  const canCheckFraud = selected ? access.can(selected.id, "useAi") : false;
   closedRef.current = closed;
 
   // Ngoài giờ thì tắt camera đang bật.
@@ -223,18 +228,33 @@ export function CheckInScreen() {
             </p>
           )}
 
-          {method === "QR" && (
+          {(method === "QR" || canCheckFraud) && (
             <div className="camera-toggle">
-              <button
-                type="button"
-                className={camera ? "button button-ghost" : "button"}
-                onClick={() => setCamera((v) => !v)}
-                disabled={closed}
-                title={closed ? "Ngoài giờ check-in" : undefined}
-              >
-                {camera ? "Tắt camera" : "Quét bằng camera"}
-              </button>
+              {method === "QR" && (
+                <button
+                  type="button"
+                  className={camera ? "button button-ghost" : "button"}
+                  onClick={() => setCamera((v) => !v)}
+                  disabled={closed}
+                  title={closed ? "Ngoài giờ check-in" : undefined}
+                >
+                  {camera ? "Tắt camera" : "Quét bằng camera"}
+                </button>
+              )}
+              {canCheckFraud && (
+                <button
+                  type="button"
+                  className={fraudOpen ? "button" : "button button-ghost"}
+                  onClick={() => setFraudOpen((v) => !v)}
+                  aria-expanded={fraudOpen}
+                >
+                  Kiểm tra gian lận
+                </button>
+              )}
             </div>
+          )}
+          {fraudOpen && canCheckFraud && selected && (
+            <FraudCheckPanel eventId={selected.id} opensAt={opensAt} closesAt={closesAt} onClose={() => setFraudOpen(false)} />
           )}
           {camera && method === "QR" && !closed && <CameraScanner paused={busy} feedback={cameraFeedback} onDetect={(value) => submitCode(value, "QR")} />}
 
