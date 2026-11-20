@@ -1,0 +1,1079 @@
+{
+  "result": {
+    "summary": "Phân tích 45 lượt quét trong khoảng thời gian từ 17:40:49 đến 18:40:49 ghi nhận 13 lượt ACCEPTED và 32 lượt ALREADY_USED trên 8 vé có quét lặp. Phát hiện nhiều mẫu hình bất thường nghiêm trọng gồm: 2 vé được chấp nhận đồng thời trên nhiều thiết bị (R4), 2 vé quét lặp nhanh đa thiết bị (R1), 2 vé quét lặp kéo dài liên tục (R2), và 2 vé quét lặp theo từng đợt cách biệt (R3). Mức độ rủi ro chung của sự kiện ở mức cao, cần tổ chức rà soát các cổng kiểm soát.",
+    "riskLevel": "high",
+    "anomalies": [
+      {
+        "signal": "MULTIPLE_ACCEPTED_CONCURRENT",
+        "severity": "critical",
+        "explanation": "Vé được hệ thống ghi nhận ACCEPTED đồng thời hoặc gần như tức thì trên nhiều máy quét khác nhau, nghi vấn đồng bộ trễ hoặc cố tình chia sẻ vé quét tại nhiều cổng cùng lúc.",
+        "evidence": "demo-ai-ticket-multiple-accepted-2 và demo-ai-ticket-multiple-accepted đều có 2 lượt ACCEPTED tại cùng một thời điểm trên 2 thiết bị khác nhau."
+      },
+      {
+        "signal": "RAPID_REPEAT_MULTI_DEVICE",
+        "severity": "high",
+        "explanation": "Sau khi vé đã ACCEPTED, xuất hiện nhiều lượt ALREADY_USED liên tiếp trong vòng 5 phút trên nhiều thiết bị khác nhau.",
+        "evidence": "demo-ai-ticket-rapid và demo-ai-ticket-rapid-2 ghi nhận từ 4 đến 5 lượt ALREADY_USED chỉ trong vòng 2-3 phút trên 3 máy quét khác nhau."
+      },
+      {
+        "signal": "PERSISTENT_REPEATED_SCANS",
+        "severity": "high",
+        "explanation": "Vé liên tục bị quét lặp từ 5 lần trở lên qua quãng thời gian dài (trên 10 phút) trên ít nhất 2 thiết bị quét khác nhau.",
+        "evidence": "demo-ai-ticket-persistent và demo-ai-ticket-persistent-2 bị quét lặp 5 lần trải dài trong 18 phút qua scanner-west, scanner-north, scanner-south."
+      },
+      {
+        "signal": "BURST_REPEAT_PATTERN",
+        "severity": "high",
+        "explanation": "Vé xuất hiện các cụm quét lặp phân tách nhau hơn 30 phút, mỗi cụm có nhiều lần thử trên nhiều thiết bị.",
+        "evidence": "demo-ai-ticket-bursts và demo-ai-ticket-bursts-2 xuất hiện 2 cụm quét lặp cách nhau 42 phút qua scanner-north và scanner-east."
+      }
+    ],
+    "ticketAssessments": [
+      {
+        "ticketRef": "demo-ai-ticket-bursts-2",
+        "verdict": "fraud_suspected",
+        "confidence": 0.92,
+        "evidence": [
+          "Khớp quy ước R3 (cụm quét lặp cách quãng).",
+          "Cụm 1: 2 lượt ALREADY_USED từ 17:47:49 đến 17:48:49 trên scanner-north và scanner-east (trong vòng 1 phút, <= 5 phút).",
+          "Cụm 2: 2 lượt ALREADY_USED từ 18:29:49 đến 18:30:49 trên scanner-north và scanner-east (trong vòng 1 phút, <= 5 phút).",
+          "Khoảng cách giữa hai cụm là 42 phút (>= 30 phút), liên quan đến 2 thiết bị quét lặp."
+        ],
+        "alternativeExplanations": [
+          "Người tham dự hoặc nhóm người thử vào cổng lại sau một khoảng thời gian dài rời đi.",
+          "Hình ảnh mã vé được chuyển tiếp hoặc gửi cho người khác đến sau."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-bursts",
+        "verdict": "fraud_suspected",
+        "confidence": 0.92,
+        "evidence": [
+          "Khớp quy ước R3 (cụm quét lặp cách quãng).",
+          "Cụm 1: 2 lượt ALREADY_USED từ 17:50:49 đến 17:51:49 trên scanner-north và scanner-east (<= 5 phút).",
+          "Cụm 2: 2 lượt ALREADY_USED từ 18:32:49 đến 18:33:49 trên scanner-north và scanner-east (<= 5 phút).",
+          "Khoảng cách bắt đầu giữa hai cụm là 42 phút (>= 30 phút), liên quan đến 2 thiết bị quét khác nhau."
+        ],
+        "alternativeExplanations": [
+          "Vé bị chia sẻ lại sau khi vào cổng ban đầu khoảng 40 phút.",
+          "Thử quét lại vé cũ tại cổng vào ca kiểm soát sau."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-persistent-2",
+        "verdict": "fraud_suspected",
+        "confidence": 0.92,
+        "evidence": [
+          "Khớp quy ước R2 (quét lặp kéo dài đa thiết bị).",
+          "Sau lượt ACCEPTED lúc 17:55:49 (scanner-west), có 5 lượt ALREADY_USED liên tiếp từ 18:00:49 đến 18:18:49.",
+          "Khoảng thời gian từ lần quét lặp đầu đến cuối là 18 phút (>= 10 phút persistentRepeatSpanMinutes).",
+          "Các lượt quét lặp diễn ra trên 2 thiết bị khác nhau: scanner-north và scanner-west."
+        ],
+        "alternativeExplanations": [
+          "Khách liên tục thử quét lại tại nhiều lối đi do không hiểu thông báo từ chối.",
+          "Mã QR hiển thị trên màn hình bị lỗi hoặc quét nhầm nhiều lần tại khu vực soát vé."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-persistent",
+        "verdict": "fraud_suspected",
+        "confidence": 0.92,
+        "evidence": [
+          "Khớp quy ước R2 (quét lặp kéo dài đa thiết bị).",
+          "Sau lượt ACCEPTED lúc 18:05:49 (scanner-west), có 5 lượt ALREADY_USED từ 18:10:49 đến 18:28:49.",
+          "Khoảng thời gian lặp kéo dài 18 phút (>= 10 phút), diễn ra trên 2 thiết bị: scanner-west và scanner-south."
+        ],
+        "alternativeExplanations": [
+          "Khách gặp khó khăn khi qua cổng quay (turnstile) nên nhân viên thử quét lại nhiều lần qua thời gian dài.",
+          "Vé được chuyển cho người khác thử vào ở các cổng khác nhau."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-rapid-2",
+        "verdict": "fraud_suspected",
+        "confidence": 0.9,
+        "evidence": [
+          "Khớp quy ước R1 (quét lặp nhanh đa thiết bị).",
+          "Sau lượt ACCEPTED lúc 18:20:49 (scanner-west), có 4 lượt ALREADY_USED từ 18:21:49 đến 18:23:19 (trong vòng 1.5 phút, <= 5 phút rapidRepeatMinutes).",
+          "Có 3 thiết bị quét lặp khác nhau tham gia: scanner-north, scanner-east, scanner-south."
+        ],
+        "alternativeExplanations": [
+          "Nhiều cổng soát vé đặt sát nhau quét trúng cùng một màn hình điện thoại.",
+          "Nhóm người chụp lại cùng một mã vé và cố gắng cùng check-in tại các luồng khác nhau."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-same-device-control",
+        "verdict": "not_suspected",
+        "confidence": 0.88,
+        "evidence": [
+          "Có 1 lượt ACCEPTED (18:22:49) và 3 lượt ALREADY_USED liên tiếp từ 18:23:49 đến 18:24:49.",
+          "Tất cả các lượt quét đều diễn ra trên cùng một thiết bị duy nhất (scanner-west).",
+          "Không thỏa điều kiện đa thiết bị của R1 (cần >= 2 deviceId) hay R2/R3/R4."
+        ],
+        "alternativeExplanations": [
+          "Nhân viên quét bấm lặp nhiều lần do thiết bị phản hồi chậm hoặc khách chưa bước qua kịp.",
+          "Quét nhầm 2 lần tại một cửa soát vé."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-rapid",
+        "verdict": "fraud_suspected",
+        "confidence": 0.92,
+        "evidence": [
+          "Khớp quy ước R1 (quét lặp nhanh đa thiết bị).",
+          "Sau lượt ACCEPTED lúc 18:28:49 (scanner-north), có 5 lượt ALREADY_USED từ 18:29:49 đến 18:31:49 (trong vòng 2 phút, <= 5 phút rapidRepeatMinutes).",
+          "Các lượt quét lặp diễn ra trên 3 thiết bị khác nhau: scanner-east, scanner-south, scanner-west."
+        ],
+        "alternativeExplanations": [
+          "Ảnh chụp màn hình vé được phát tán cho nhiều người thử vào cổng đồng thời.",
+          "Lỗi thao tác quét liên tục tại cụm cổng liền kề."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-few-repeats-control",
+        "verdict": "not_suspected",
+        "confidence": 0.9,
+        "evidence": [
+          "Có 1 lượt ACCEPTED (18:35:49) và chỉ có 2 lượt ALREADY_USED (18:36:49 trên scanner-north, 18:37:49 trên scanner-east).",
+          "Số lượt quét lặp (2 lượt) không đủ ngưỡng tối thiểu của R1 (cần >= 3) hoặc R2 (cần >= 5) và không tạo thành 2 cụm độc lập (R3)."
+        ],
+        "alternativeExplanations": [
+          "Khách thử chuyển sang cổng kế bên sau khi gặp trục trặc kỹ thuật tại cổng ban đầu.",
+          "Nhân viên hướng dẫn khách sang cổng khác quét lại."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-multiple-accepted-2",
+        "verdict": "fraud_suspected",
+        "confidence": 0.95,
+        "evidence": [
+          "Khớp quy ước R4 (nhiều lượt chấp nhận gần như đồng thời).",
+          "Ghi nhận 2 lượt ACCEPTED tại cùng thời điểm 18:37:49.865Z (chênh lệch 0 giây, <= 10 giây multipleAcceptedWindowSeconds).",
+          "Được ghi nhận trên 2 thiết bị khác nhau: scanner-south và scanner-west."
+        ],
+        "alternativeExplanations": [
+          "Xung đột do độ trễ đồng bộ mạng giữa các máy quét offline/online dẫn đến cả hai máy đều chấp nhận vé.",
+          "Vé bị làm giả/nhân bản và sử dụng đồng thời tại hai lối vào."
+        ]
+      },
+      {
+        "ticketRef": "demo-ai-ticket-normal-control",
+        "verdict": "not_suspected",
+        "confidence": 0.98,
+        "evidence": [
+          "Chỉ có đúng 1 lượt quét ACCEPTED lúc 18:38:49 trên thiết bị scanner-south.",
+          "Không có bất kỳ lượt quét lặp hay lỗi phát sinh nào."
+        ],
+        "alternativeExplanations": []
+      },
+      {
+        "ticketRef": "demo-ai-ticket-multiple-accepted",
+        "verdict": "fraud_suspected",
+        "confidence": 0.95,
+        "evidence": [
+          "Khớp quy ước R4 (nhiều lượt chấp nhận gần như đồng thời).",
+          "Ghi nhận 2 lượt ACCEPTED cùng thời điểm 18:39:49.865Z (chênh lệch 0 giây, <= 10 giây multipleAcceptedWindowSeconds).",
+          "Được ghi nhận trên 2 thiết bị khác nhau: scanner-east và scanner-north."
+        ],
+        "alternativeExplanations": [
+          "Lỗi đồng bộ phân tán (race condition) giữa hai máy quét khi kiểm tra trạng thái vé trong cơ sở dữ liệu.",
+          "Hành vi cố ý chia sẻ vé cho hai người quét đồng thời để tránh bị chặn ALREADY_USED."
+        ]
+      }
+    ],
+    "recommendations": [
+      "Khẩn trương kiểm tra cơ chế khóa (locking/concurrency control) tại backend và độ trễ đồng bộ giữa các máy quét để ngăn chặn tình trạng nhiều lượt ACCEPTED đồng thời (R4).",
+      "Phối hợp với điều phối viên tại các cổng scanner-north, scanner-east, scanner-south, scanner-west để đối chiếu thể chất của người mang mã vé nghi vấn R1, R2, R3, R4.",
+      "Xem xét áp dụng giải pháp mã QR động (dynamic rotating QR) trên ứng dụng nhằm vô hiệu hóa hành vi chụp màn hình và chuyển tiếp vé.",
+      "Đào tạo nhân viên soát vé nhận diện cảnh báo ALREADY_USED trên màn hình máy quét để từ chối ngay lập tức và giữ lại đối tượng khả nghi nếu cần rà soát thêm."
+    ],
+    "ticketFraudConclusions": [
+      {
+        "ticketRef": "demo-ai-ticket-bursts-2",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-bursts-2",
+          "verdict": "fraud_suspected",
+          "confidence": 0.92,
+          "evidence": [
+            "Khớp quy ước R3 (cụm quét lặp cách quãng).",
+            "Cụm 1: 2 lượt ALREADY_USED từ 17:47:49 đến 17:48:49 trên scanner-north và scanner-east (trong vòng 1 phút, <= 5 phút).",
+            "Cụm 2: 2 lượt ALREADY_USED từ 18:29:49 đến 18:30:49 trên scanner-north và scanner-east (trong vòng 1 phút, <= 5 phút).",
+            "Khoảng cách giữa hai cụm là 42 phút (>= 30 phút), liên quan đến 2 thiết bị quét lặp."
+          ],
+          "alternativeExplanations": [
+            "Người tham dự hoặc nhóm người thử vào cổng lại sau một khoảng thời gian dài rời đi.",
+            "Hình ảnh mã vé được chuyển tiếp hoặc gửi cho người khác đến sau."
+          ]
+        },
+        "matchedRules": [
+          "R3_SEPARATE_REPEAT_BURSTS"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-bursts-2 đã được quét thành công lúc 00:42:49 17/11/26 tại máy scanner-west.",
+          "Vé demo-ai-ticket-bursts-2 được quét lại lúc 00:47:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-bursts-2 được quét lại lúc 00:48:49 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-bursts-2 được quét lại lúc 01:29:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-bursts-2 được quét lại lúc 01:30:49 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 4,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T17:42:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:47:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:48:49.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:29:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:30:49.865Z",
+              "deviceId": "scanner-east"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 4,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:47:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:48:49.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:29:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:30:49.865Z",
+              "deviceId": "scanner-east"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "Log có mẫu quét lặp đáng nghi trên nhiều thiết bị; ban tổ chức cần rà soát lịch sử check-in.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-bursts",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-bursts",
+          "verdict": "fraud_suspected",
+          "confidence": 0.92,
+          "evidence": [
+            "Khớp quy ước R3 (cụm quét lặp cách quãng).",
+            "Cụm 1: 2 lượt ALREADY_USED từ 17:50:49 đến 17:51:49 trên scanner-north và scanner-east (<= 5 phút).",
+            "Cụm 2: 2 lượt ALREADY_USED từ 18:32:49 đến 18:33:49 trên scanner-north và scanner-east (<= 5 phút).",
+            "Khoảng cách bắt đầu giữa hai cụm là 42 phút (>= 30 phút), liên quan đến 2 thiết bị quét khác nhau."
+          ],
+          "alternativeExplanations": [
+            "Vé bị chia sẻ lại sau khi vào cổng ban đầu khoảng 40 phút.",
+            "Thử quét lại vé cũ tại cổng vào ca kiểm soát sau."
+          ]
+        },
+        "matchedRules": [
+          "R3_SEPARATE_REPEAT_BURSTS"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-bursts đã được quét thành công lúc 00:45:49 17/11/26 tại máy scanner-west.",
+          "Vé demo-ai-ticket-bursts được quét lại lúc 00:50:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-bursts được quét lại lúc 00:51:49 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-bursts được quét lại lúc 01:32:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-bursts được quét lại lúc 01:33:49 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 4,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T17:45:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:50:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:51:49.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:32:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:33:49.865Z",
+              "deviceId": "scanner-east"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 4,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:50:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T17:51:49.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:32:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:33:49.865Z",
+              "deviceId": "scanner-east"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "Log có mẫu quét lặp đáng nghi trên nhiều thiết bị; ban tổ chức cần rà soát lịch sử check-in.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-persistent-2",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-persistent-2",
+          "verdict": "fraud_suspected",
+          "confidence": 0.92,
+          "evidence": [
+            "Khớp quy ước R2 (quét lặp kéo dài đa thiết bị).",
+            "Sau lượt ACCEPTED lúc 17:55:49 (scanner-west), có 5 lượt ALREADY_USED liên tiếp từ 18:00:49 đến 18:18:49.",
+            "Khoảng thời gian từ lần quét lặp đầu đến cuối là 18 phút (>= 10 phút persistentRepeatSpanMinutes).",
+            "Các lượt quét lặp diễn ra trên 2 thiết bị khác nhau: scanner-north và scanner-west."
+          ],
+          "alternativeExplanations": [
+            "Khách liên tục thử quét lại tại nhiều lối đi do không hiểu thông báo từ chối.",
+            "Mã QR hiển thị trên màn hình bị lỗi hoặc quét nhầm nhiều lần tại khu vực soát vé."
+          ]
+        },
+        "matchedRules": [
+          "R2_PERSISTENT_DUPLICATE_USE"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-persistent-2 đã được quét thành công lúc 00:55:49 17/11/26 tại máy scanner-west.",
+          "Vé demo-ai-ticket-persistent-2 được quét lại lúc 01:00:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent-2 được quét lại lúc 01:05:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent-2 được quét lại lúc 01:10:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent-2 được quét lại lúc 01:15:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent-2 được quét lại lúc 01:18:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 5,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T17:55:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:00:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:05:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:10:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:15:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:18:49.865Z",
+              "deviceId": "scanner-north"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 5,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:00:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:05:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:10:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:15:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:18:49.865Z",
+              "deviceId": "scanner-north"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "Log có mẫu quét lặp đáng nghi trên nhiều thiết bị; ban tổ chức cần rà soát lịch sử check-in.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-persistent",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-persistent",
+          "verdict": "fraud_suspected",
+          "confidence": 0.92,
+          "evidence": [
+            "Khớp quy ước R2 (quét lặp kéo dài đa thiết bị).",
+            "Sau lượt ACCEPTED lúc 18:05:49 (scanner-west), có 5 lượt ALREADY_USED từ 18:10:49 đến 18:28:49.",
+            "Khoảng thời gian lặp kéo dài 18 phút (>= 10 phút), diễn ra trên 2 thiết bị: scanner-west và scanner-south."
+          ],
+          "alternativeExplanations": [
+            "Khách gặp khó khăn khi qua cổng quay (turnstile) nên nhân viên thử quét lại nhiều lần qua thời gian dài.",
+            "Vé được chuyển cho người khác thử vào ở các cổng khác nhau."
+          ]
+        },
+        "matchedRules": [
+          "R2_PERSISTENT_DUPLICATE_USE"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-persistent đã được quét thành công lúc 01:05:49 17/11/26 tại máy scanner-west.",
+          "Vé demo-ai-ticket-persistent được quét lại lúc 01:10:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent được quét lại lúc 01:15:49 17/11/26 tại máy scanner-south; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent được quét lại lúc 01:20:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent được quét lại lúc 01:25:49 17/11/26 tại máy scanner-south; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-persistent được quét lại lúc 01:28:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 5,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:05:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:10:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:15:49.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:20:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:25:49.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:28:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 5,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:10:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:15:49.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:20:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:25:49.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:28:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "Log có mẫu quét lặp đáng nghi trên nhiều thiết bị; ban tổ chức cần rà soát lịch sử check-in.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-rapid-2",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-rapid-2",
+          "verdict": "fraud_suspected",
+          "confidence": 0.9,
+          "evidence": [
+            "Khớp quy ước R1 (quét lặp nhanh đa thiết bị).",
+            "Sau lượt ACCEPTED lúc 18:20:49 (scanner-west), có 4 lượt ALREADY_USED từ 18:21:49 đến 18:23:19 (trong vòng 1.5 phút, <= 5 phút rapidRepeatMinutes).",
+            "Có 3 thiết bị quét lặp khác nhau tham gia: scanner-north, scanner-east, scanner-south."
+          ],
+          "alternativeExplanations": [
+            "Nhiều cổng soát vé đặt sát nhau quét trúng cùng một màn hình điện thoại.",
+            "Nhóm người chụp lại cùng một mã vé và cố gắng cùng check-in tại các luồng khác nhau."
+          ]
+        },
+        "matchedRules": [
+          "R1_RAPID_DUPLICATE_USE"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-rapid-2 đã được quét thành công lúc 01:20:49 17/11/26 tại máy scanner-west.",
+          "Vé demo-ai-ticket-rapid-2 được quét lại lúc 01:21:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-rapid-2 được quét lại lúc 01:22:19 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-rapid-2 được quét lại lúc 01:22:49 17/11/26 tại máy scanner-south; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-rapid-2 được quét lại lúc 01:23:19 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 4,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:20:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:21:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:22:19.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:22:49.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:23:19.865Z",
+              "deviceId": "scanner-north"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 4,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:21:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:22:19.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:22:49.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:23:19.865Z",
+              "deviceId": "scanner-north"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "Log có mẫu quét lặp đáng nghi trên nhiều thiết bị; ban tổ chức cần rà soát lịch sử check-in.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-same-device-control",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-same-device-control",
+          "verdict": "not_suspected",
+          "confidence": 0.88,
+          "evidence": [
+            "Có 1 lượt ACCEPTED (18:22:49) và 3 lượt ALREADY_USED liên tiếp từ 18:23:49 đến 18:24:49.",
+            "Tất cả các lượt quét đều diễn ra trên cùng một thiết bị duy nhất (scanner-west).",
+            "Không thỏa điều kiện đa thiết bị của R1 (cần >= 2 deviceId) hay R2/R3/R4."
+          ],
+          "alternativeExplanations": [
+            "Nhân viên quét bấm lặp nhiều lần do thiết bị phản hồi chậm hoặc khách chưa bước qua kịp.",
+            "Quét nhầm 2 lần tại một cửa soát vé."
+          ]
+        },
+        "matchedRules": [],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-same-device-control đã được quét thành công lúc 01:22:49 17/11/26 tại máy scanner-west.",
+          "Vé demo-ai-ticket-same-device-control được quét lại lúc 01:23:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-same-device-control được quét lại lúc 01:24:19 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-same-device-control được quét lại lúc 01:24:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 3,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:22:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:23:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:24:19.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:24:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 3,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:23:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:24:19.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:24:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": null,
+        "decision": "INCONCLUSIVE",
+        "decisionReason": "LLM/scan evidence did not meet the project decision rule.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-rapid",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-rapid",
+          "verdict": "fraud_suspected",
+          "confidence": 0.92,
+          "evidence": [
+            "Khớp quy ước R1 (quét lặp nhanh đa thiết bị).",
+            "Sau lượt ACCEPTED lúc 18:28:49 (scanner-north), có 5 lượt ALREADY_USED từ 18:29:49 đến 18:31:49 (trong vòng 2 phút, <= 5 phút rapidRepeatMinutes).",
+            "Các lượt quét lặp diễn ra trên 3 thiết bị khác nhau: scanner-east, scanner-south, scanner-west."
+          ],
+          "alternativeExplanations": [
+            "Ảnh chụp màn hình vé được phát tán cho nhiều người thử vào cổng đồng thời.",
+            "Lỗi thao tác quét liên tục tại cụm cổng liền kề."
+          ]
+        },
+        "matchedRules": [
+          "R1_RAPID_DUPLICATE_USE"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-rapid đã được quét thành công lúc 01:28:49 17/11/26 tại máy scanner-north.",
+          "Vé demo-ai-ticket-rapid được quét lại lúc 01:29:49 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-rapid được quét lại lúc 01:30:19 17/11/26 tại máy scanner-south; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-rapid được quét lại lúc 01:30:49 17/11/26 tại máy scanner-west; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-rapid được quét lại lúc 01:31:19 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-rapid được quét lại lúc 01:31:49 17/11/26 tại máy scanner-south; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 5,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:28:49.865Z",
+              "deviceId": "scanner-north"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:29:49.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:30:19.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:30:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:31:19.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:31:49.865Z",
+              "deviceId": "scanner-south"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 5,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:29:49.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:30:19.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:30:49.865Z",
+              "deviceId": "scanner-west"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:31:19.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:31:49.865Z",
+              "deviceId": "scanner-south"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "Log có mẫu quét lặp đáng nghi trên nhiều thiết bị; ban tổ chức cần rà soát lịch sử check-in.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-few-repeats-control",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-few-repeats-control",
+          "verdict": "not_suspected",
+          "confidence": 0.9,
+          "evidence": [
+            "Có 1 lượt ACCEPTED (18:35:49) và chỉ có 2 lượt ALREADY_USED (18:36:49 trên scanner-north, 18:37:49 trên scanner-east).",
+            "Số lượt quét lặp (2 lượt) không đủ ngưỡng tối thiểu của R1 (cần >= 3) hoặc R2 (cần >= 5) và không tạo thành 2 cụm độc lập (R3)."
+          ],
+          "alternativeExplanations": [
+            "Khách thử chuyển sang cổng kế bên sau khi gặp trục trặc kỹ thuật tại cổng ban đầu.",
+            "Nhân viên hướng dẫn khách sang cổng khác quét lại."
+          ]
+        },
+        "matchedRules": [],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-few-repeats-control đã được quét thành công lúc 01:35:49 17/11/26 tại máy scanner-north.",
+          "Vé demo-ai-ticket-few-repeats-control được quét lại lúc 01:36:49 17/11/26 tại máy scanner-north; hệ thống báo ALREADY_USED (vé đã được sử dụng).",
+          "Vé demo-ai-ticket-few-repeats-control được quét lại lúc 01:37:49 17/11/26 tại máy scanner-east; hệ thống báo ALREADY_USED (vé đã được sử dụng)."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 2,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:35:49.865Z",
+              "deviceId": "scanner-north"
+            }
+          ],
+          "repeatedAttempts": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:36:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:37:49.865Z",
+              "deviceId": "scanner-east"
+            }
+          ],
+          "repeatedAfterAcceptedCount": 2,
+          "repeatedAfterAccepted": [
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:36:49.865Z",
+              "deviceId": "scanner-north"
+            },
+            {
+              "status": "ALREADY_USED",
+              "scannedAt": "2026-11-16T18:37:49.865Z",
+              "deviceId": "scanner-east"
+            }
+          ],
+          "invalidAttempts": []
+        },
+        "isFraud": null,
+        "decision": "INCONCLUSIVE",
+        "decisionReason": "LLM/scan evidence did not meet the project decision rule.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-multiple-accepted-2",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-multiple-accepted-2",
+          "verdict": "fraud_suspected",
+          "confidence": 0.95,
+          "evidence": [
+            "Khớp quy ước R4 (nhiều lượt chấp nhận gần như đồng thời).",
+            "Ghi nhận 2 lượt ACCEPTED tại cùng thời điểm 18:37:49.865Z (chênh lệch 0 giây, <= 10 giây multipleAcceptedWindowSeconds).",
+            "Được ghi nhận trên 2 thiết bị khác nhau: scanner-south và scanner-west."
+          ],
+          "alternativeExplanations": [
+            "Xung đột do độ trễ đồng bộ mạng giữa các máy quét offline/online dẫn đến cả hai máy đều chấp nhận vé.",
+            "Vé bị làm giả/nhân bản và sử dụng đồng thời tại hai lối vào."
+          ]
+        },
+        "matchedRules": [
+          "R4_MULTIPLE_ACCEPTED_DIFFERENT_DEVICES"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-multiple-accepted-2 đã được quét thành công lúc 01:37:49 17/11/26 tại máy scanner-south.",
+          "Vé demo-ai-ticket-multiple-accepted-2 đã được quét thành công lúc 01:37:49 17/11/26 tại máy scanner-west."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 2,
+            "alreadyUsed": 0,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:37:49.865Z",
+              "deviceId": "scanner-south"
+            },
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:37:49.865Z",
+              "deviceId": "scanner-west"
+            }
+          ],
+          "repeatedAttempts": [],
+          "repeatedAfterAcceptedCount": 0,
+          "repeatedAfterAccepted": [],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "LLM đánh giá nghi ngờ và log ghi nhận cùng vé được ACCEPTED gần như đồng thời trên nhiều thiết bị; cần rà soát vì hệ thống có thể đã cho check-in trùng.",
+        "requiresOrganizerReview": true
+      },
+      {
+        "ticketRef": "demo-ai-ticket-normal-control",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-normal-control",
+          "verdict": "not_suspected",
+          "confidence": 0.98,
+          "evidence": [
+            "Chỉ có đúng 1 lượt quét ACCEPTED lúc 18:38:49 trên thiết bị scanner-south.",
+            "Không có bất kỳ lượt quét lặp hay lỗi phát sinh nào."
+          ],
+          "alternativeExplanations": []
+        },
+        "matchedRules": [],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-normal-control đã được quét thành công lúc 01:38:49 17/11/26 tại máy scanner-south."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 1,
+            "alreadyUsed": 0,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:38:49.865Z",
+              "deviceId": "scanner-south"
+            }
+          ],
+          "repeatedAttempts": [],
+          "repeatedAfterAcceptedCount": 0,
+          "repeatedAfterAccepted": [],
+          "invalidAttempts": []
+        },
+        "isFraud": false,
+        "decision": "NO_FRAUD_SIGNAL",
+        "decisionReason": "LLM không đánh giá nghi ngờ (confidence >= 0.85) và log không có lượt quét lặp/mã không hợp lệ gắn với vé.",
+        "requiresOrganizerReview": false
+      },
+      {
+        "ticketRef": "demo-ai-ticket-multiple-accepted",
+        "llmAssessment": {
+          "ticketRef": "demo-ai-ticket-multiple-accepted",
+          "verdict": "fraud_suspected",
+          "confidence": 0.95,
+          "evidence": [
+            "Khớp quy ước R4 (nhiều lượt chấp nhận gần như đồng thời).",
+            "Ghi nhận 2 lượt ACCEPTED cùng thời điểm 18:39:49.865Z (chênh lệch 0 giây, <= 10 giây multipleAcceptedWindowSeconds).",
+            "Được ghi nhận trên 2 thiết bị khác nhau: scanner-east và scanner-north."
+          ],
+          "alternativeExplanations": [
+            "Lỗi đồng bộ phân tán (race condition) giữa hai máy quét khi kiểm tra trạng thái vé trong cơ sở dữ liệu.",
+            "Hành vi cố ý chia sẻ vé cho hai người quét đồng thời để tránh bị chặn ALREADY_USED."
+          ]
+        },
+        "matchedRules": [
+          "R4_MULTIPLE_ACCEPTED_DIFFERENT_DEVICES"
+        ],
+        "evidenceDetails": [
+          "Vé demo-ai-ticket-multiple-accepted đã được quét thành công lúc 01:39:49 17/11/26 tại máy scanner-east.",
+          "Vé demo-ai-ticket-multiple-accepted đã được quét thành công lúc 01:39:49 17/11/26 tại máy scanner-north."
+        ],
+        "scanEvidence": {
+          "counts": {
+            "accepted": 2,
+            "alreadyUsed": 0,
+            "invalid": 0,
+            "notEligible": 0
+          },
+          "acceptedAttempts": [
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:39:49.865Z",
+              "deviceId": "scanner-east"
+            },
+            {
+              "status": "ACCEPTED",
+              "scannedAt": "2026-11-16T18:39:49.865Z",
+              "deviceId": "scanner-north"
+            }
+          ],
+          "repeatedAttempts": [],
+          "repeatedAfterAcceptedCount": 0,
+          "repeatedAfterAccepted": [],
+          "invalidAttempts": []
+        },
+        "isFraud": true,
+        "decision": "FRAUD_BY_PROJECT_POLICY",
+        "decisionReason": "LLM đánh giá nghi ngờ và log ghi nhận cùng vé được ACCEPTED gần như đồng thời trên nhiều thiết bị; cần rà soát vì hệ thống có thể đã cho check-in trùng.",
+        "requiresOrganizerReview": true
+      }
+    ],
+    "organizerDecisionSupport": {
+      "status": "REVIEW_FOR_POSSIBLE_MISUSE",
+      "message": "Có tín hiệu check-in cần người tổ chức rà soát; đây chưa phải kết luận gian lận.",
+      "requiresHumanReview": true
+    }
+  },
+  "generatedBy": "gemini-3.8-flash",
+  "requiresHumanReview": true
+}

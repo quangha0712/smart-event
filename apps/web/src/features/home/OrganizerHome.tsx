@@ -24,7 +24,7 @@ function LiveCheckIn({ event }: { event: EventSummary }) {
   return (
     <section className="live-card" aria-label={`Check-in trực tiếp: ${event.name}`}>
       <div className="live-head">
-        <span className="live-dot" aria-hidden="true" /> <span className="eyebrow">ĐANG DIỄN RA</span>
+        <span className="live-dot" aria-hidden="true" /> <span className="eyebrow">Đang diễn ra</span>
         <h2>{event.name}</h2>
         <Link className="button" href={`/check-in?eventId=${encodeURIComponent(event.id)}`}>Mở màn hình check-in</Link>
       </div>

@@ -52,7 +52,7 @@ export function AttendeeHome() {
       {next && (
         <section className="next-event" aria-label="Sự kiện sắp tới của bạn">
           <div className="next-event-info">
-            <span className="eyebrow">SỰ KIỆN SẮP TỚI CỦA BẠN</span>
+            <span className="eyebrow">Sự kiện sắp tới của bạn</span>
             <h2>{next.event.name}</h2>
             <div className="next-event-meta">
               <TimePill startsAt={next.event.startsAt} endsAt={next.event.endsAt} />

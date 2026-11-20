@@ -32,10 +32,10 @@ export function FeedbackInsightsPanel({ eventId }: { eventId: string }) {
     <section aria-labelledby="ai-insights-title" className="ai-panel">
       <h2 id="ai-insights-title">AI tổng hợp đánh giá sự kiện</h2>
       <p>AI nhóm các chủ đề phản hồi để hỗ trợ ban tổ chức xem xét cải thiện.</p>
-      <button type="button" onClick={generateInsights} disabled={loading}>
+      <button className="button" type="button" onClick={generateInsights} disabled={loading}>
         {loading ? "Đang phân tích…" : "Tạo tổng hợp AI"}
       </button>
-      {error && <p role="alert">{error}</p>}
+      {error && <p className="form-error" role="alert">{error}</p>}
       {data && (
         <>
           <p className="ai-notice">Bản phân tích do AI tạo; cần người tổ chức rà soát trước khi sử dụng.</p>
