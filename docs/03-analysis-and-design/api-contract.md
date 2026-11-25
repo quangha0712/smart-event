@@ -1,133 +1,147 @@
 # API contract
 
-Base URL cục bộ: `http://localhost:3001/api`.
+> Người phụ trách tài liệu: TV2 – BA (đối chiếu với controller trong `apps/api/src`, nhánh `dev`). Swagger chạy tại `http://localhost:3001/docs` (OpenAPI JSON: `/docs-json`) là nguồn chi tiết DTO.
 
-| Method | Endpoint dự kiến | Mục đích |
-|---|---|---|
-| GET | `/health` | Kiểm tra API hoạt động |
-| POST/GET/PATCH | `/events` | Quản lý sự kiện |
-| GET/POST | `/events/:id/schedules` | Quản lý lịch trình |
-| POST | `/events/:eventId/registrations` | Đăng ký tham dự, tạo vé QR |
-| GET | `/events/:eventId/registrations/:registrationId` | Xem trạng thái đăng ký/vé |
-| DELETE | `/events/:eventId/registrations/:registrationId` | Hủy đăng ký |
-| GET | `/tickets/:qrCode` | Tra cứu vé bằng payload QR |
-| POST | `/events/:eventId/check-in` | Check-in bằng payload QR |
-| GET | `/events/:eventId/check-ins/summary?from=&to=` | Tổng hợp lượt check-in theo thời gian |
-| GET | `/audit-logs?eventId=&from=&to=&page=&pageSize=` | Tra cứu audit log theo sự kiện/thời gian |
-| POST | `/events/:id/feedback` | Gửi đánh giá |
-| POST | `/ai/project-summary` | Tóm tắt tiến độ/rủi ro từ dữ liệu PM cung cấp |
-| POST | `/ai/requirements-draft` | Tạo bản nháp yêu cầu/use case cho BA rà soát |
-| POST | `/ai/budget-estimate` | Gợi ý dự toán sơ bộ sự kiện |
-| POST | `/ai/check-in-analysis` | Phân tích số liệu check-in lấy từ log database |
-| POST | `/ai/events/:eventId/feedback-insights` | Tổng hợp phản hồi đã lưu của sự kiện |
+## 1. Quy ước chung
 
-Các endpoint nghiệp vụ là hợp đồng dự kiến; cập nhật DTO, mã lỗi và quyền truy cập trước khi frontend tích hợp.
+- Base URL cục bộ: `http://localhost:3001/api`.
+- Xác thực: header `Authorization: Bearer <accessToken>` lấy từ `POST /auth/login`. Mọi route cần đăng nhập, trừ dòng ghi **Công khai**.
+- Hai lớp phân quyền:
+  - **Quyền hệ thống** (`UserRole`): ADMIN, ORGANIZER, ATTENDEE. ADMIN luôn được phép.
+  - **Vai trò trong sự kiện** (`EventMemberRole`, kiểm tra bởi `EventMemberGuard`): OWNER, CO_ORGANIZER, CHECKIN_STAFF. Viết tắt bên dưới: **ALL** = cả ba; **MGR** = OWNER + CO_ORGANIZER; **OWN** = chỉ OWNER.
+- Mã lỗi: 400 dữ liệu sai / tham chiếu không tồn tại · 401 chưa đăng nhập hoặc token hết hạn · 403 không đủ quyền · 404 không tìm thấy (cũng dùng khi không được xem bản ghi của người khác) · 409 xung đột nghiệp vụ (trùng, hết chỗ, sai trạng thái) · 502 AI trả lỗi/sai định dạng · 503 AI chưa cấu hình hoặc không kết nối được.
 
-Các endpoint AI yêu cầu cấu hình `AI_API_KEY`, `AI_API_BASE_URL`, `AI_MODEL`. Kết quả có `requiresHumanReview: true`; đầu ra dự toán được tính lại tổng từ số lượng và đơn giá do AI trả về. Bảo vệ endpoint bằng xác thực/phân quyền trước khi triển khai ra môi trường dùng thật.
+## 2. Danh mục endpoint
 
-### Phân tích tín hiệu rủi ro check-in
-
-`POST /api/ai/check-in-analysis` nhận `eventId`, `from` và `to` theo ISO 8601. Backend lấy thống kê và chuỗi lần quét theo từng vé trong đúng khoảng thời gian này, gửi cùng prompt/rule cho LLM đánh giá, sau đó hậu kiểm verdict/confidence/evidence với bốn rule.
-
-```json
-{
-  "eventId": "<event-id-thực-tế>",
-  "from": "2026-11-15T08:00:00.000Z",
-  "to": "2026-11-15T09:00:00.000Z"
-}
-```
-
-Frontend chỉ gửi `eventId`, `from`, `to`; không gửi hoặc lựa chọn rule. Backend từ chối thời điểm không hợp lệ, `from > to` hoặc khoảng dài hơn 30 ngày. Backend tự lấy log trong khoảng đã chọn và chạy bốn rule cố định: lặp dồn dập, lặp kéo dài, nhiều cụm tách biệt và nhiều lượt `ACCEPTED` gần đồng thời trên các máy khác nhau. Seed tạo tám tình huống dương tính (hai cho mỗi rule) và ba tình huống đối chứng; `prisma/seed.ts` in ra khoảng `from`/`to` để gọi API với đúng dữ liệu seed.
-
-LLM trả verdict/confidence/evidence cho từng vé; backend chỉ trả `isFraud: true` khi LLM trả `fraud_suspected` với ngưỡng/evidence phù hợp và chuỗi log khớp ít nhất một trong bốn rule. Prompt yêu cầu đánh giá độc lập mọi ticketRef và không bỏ qua rule match chỉ vì có giả thuyết thay thế. `isFraud: true` ở đây nghĩa là **mẫu đáng nghi cần rà soát**, không phải bằng chứng xác nhận ý định gian lận. Thiết bị lấy từ quan hệ `Device` trong DB; production vẫn cần xác thực/quản lý thiết bị. Khi không khớp rule, backend chỉ trả `false` nếu LLM đưa nhận xét không nghi ngờ đủ tin cậy và log vé sạch; nếu không đủ dữ liệu trả `null`. API không tự chặn vé.
-
-Đăng ký nhận `userId` trong body do hệ thống hiện chưa có auth hoàn chỉnh. Khi auth được triển khai, API phải lấy userId từ phiên/token thay vì tin giá trị client gửi lên. Check-in nhận body `{ "qrCode": "...", "deviceId": "scanner-north" }`. Client máy quét phải giữ nguyên `deviceId` cho các lần quét trên cùng máy, không tạo ID mới cho từng request.
-
-## Ví dụ luồng Backend 2
-
-Tạo đăng ký và nhận payload QR:
-
-```http
-POST /api/events/demo-smart-event/registrations
-Content-Type: application/json
-
-{"userId":"demo-attendee"}
-```
-
-Check-in payload nhận được từ đăng ký/seed:
-
-```http
-POST /api/events/demo-smart-event/check-in
-Content-Type: application/json
-
-{"qrCode":"DEMO-QR-DO-NOT-USE-IN-PRODUCTION","deviceId":"scanner-north"}
-```
-
-Kết quả check-in gồm `result` (`ACCEPTED`, `ALREADY_USED` hoặc `INVALID`), `deviceId`, `scannedAt` và thời điểm check-in nếu hợp lệ. Mã QR demo cố định chỉ dùng môi trường phát triển.
-Mọi endpoint cần header `Authorization: Bearer <accessToken>` (lấy từ `POST /auth/login`), trừ các dòng ghi **Công khai**. Cột Quyền: ADMIN luôn được phép.
+### 2.1 Tài khoản (FR-01)
 
 | Method | Endpoint | Quyền | Mục đích |
 |---|---|---|---|
-| GET | `/health` | Công khai | Kiểm tra API hoạt động |
-| POST | `/auth/register` | Công khai | Đăng ký tài khoản (luôn là ATTENDEE) |
-| POST | `/auth/login` | Công khai | Đăng nhập, trả `accessToken` (JWT, mặc định 8h) |
-| GET | `/auth/me` | Đã đăng nhập | Thông tin tài khoản hiện tại |
+| GET | `/health` | Công khai | Kiểm tra API |
+| POST | `/auth/register` | Công khai | Tạo tài khoản ATTENDEE `{ email, fullName, password }` |
+| POST | `/auth/login` | Công khai | Trả `accessToken` (JWT, mặc định 8h) |
+| GET / PATCH | `/auth/me` | Đã đăng nhập | Xem / sửa họ tên |
+| PATCH | `/auth/me/password` | Đã đăng nhập | Đổi mật khẩu (cần mật khẩu hiện tại) |
 | GET | `/auth/users` | ADMIN | Danh sách tài khoản |
-| PATCH | `/auth/users/:id/role` | ADMIN | Đổi quyền ADMIN / ORGANIZER / ATTENDEE |
-| GET | `/events`, `/events/:id` | Công khai | Xem sự kiện (kèm lịch trình, diễn giả) |
-| POST | `/events` | ORGANIZER | Tạo sự kiện |
-| GET/POST | `/events/:id/schedules` | ORGANIZER | Quản lý lịch trình (dự kiến) |
-| POST | `/events/:id/registrations` | Đã đăng nhập | Đăng ký tham dự (dự kiến) |
-| GET | `/tickets/:code` | Đã đăng nhập | Tra cứu vé (dự kiến) |
-| POST | `/check-in` | ORGANIZER | Quét vé: `{ eventId, code, method?: QR|NFC|MANUAL, deviceCode? }`; luôn trả 200 kèm `result` |
-| GET | `/check-in/events/:eventId/stats?windowMinutes=` | ORGANIZER | Số liệu tổng hợp từ `CheckInAttempt` |
-| POST | `/events/:id/feedback` | Đã đăng nhập | Gửi đánh giá (dự kiến) |
-| GET/POST/PATCH/DELETE | `/resources/staff`, `/resources/staff-assignments` | ORGANIZER | Nhân sự và phân công theo sự kiện |
-| GET/POST/PATCH/DELETE | `/resources/vendors` | ORGANIZER | Nhà cung cấp |
-| GET/POST/PATCH/DELETE | `/resources/sponsors` | ORGANIZER | Nhà tài trợ (gắn sự kiện, có hạng và giá trị tài trợ) |
-| GET/POST/PATCH/DELETE | `/resources/budget-items`, `/resources/expenses` | ORGANIZER | Dự toán và thực chi |
-| GET | `/resources/budget-summary/:eventId` | ORGANIZER | So sánh dự toán – thực chi |
-| POST | `/ai/project-summary` | ORGANIZER | Tóm tắt tiến độ/rủi ro từ dữ liệu PM cung cấp |
-| POST | `/ai/requirements-draft` | ORGANIZER | Tạo bản nháp yêu cầu/use case cho BA rà soát |
-| POST | `/ai/budget-estimate` | ORGANIZER | Gợi ý dự toán sơ bộ sự kiện |
-| POST | `/ai/check-in-analysis` | ORGANIZER | Phân tích với số liệu nhập tay (thử kịch bản) |
-| POST | `/ai/events/:eventId/check-in-analysis?windowMinutes=` | ORGANIZER | Phân tích check-in từ dữ liệu thật trong `CheckInAttempt` |
-| POST | `/ai/events/:eventId/feedback-insights` | ORGANIZER | Tổng hợp phản hồi đã lưu của sự kiện |
+| PATCH | `/auth/users/:id/role` | ADMIN | Đổi quyền hệ thống |
 
-Các endpoint nghiệp vụ là hợp đồng dự kiến; cập nhật DTO, mã lỗi và quyền truy cập trước khi frontend tích hợp.
+### 2.2 Sự kiện, ban tổ chức, lịch trình (FR-02, FR-03, FR-15)
 
-Các endpoint AI yêu cầu cấu hình `AI_API_KEY`, `AI_API_BASE_URL`, `AI_MODEL`. Kết quả có `requiresHumanReview: true`; đầu ra dự toán được tính lại tổng từ số lượng và đơn giá do AI trả về. Endpoint AI chỉ dành cho ORGANIZER/ADMIN để tránh người ngoài gọi làm tốn phí provider.
-
-Mã lỗi chung: 400 dữ liệu sai / tham chiếu không tồn tại, 401 chưa đăng nhập hoặc token hết hạn, 403 không đủ quyền, 404 không tìm thấy, 409 trùng dữ liệu.
-
-## Mã QR vé
-
-`Ticket.qrCode` có dạng `SE1.<ticketId>.<HMAC-SHA256>` ký bằng `TICKET_QR_SECRET` (`apps/api/src/tickets/ticket-code.ts`). Mã giả hoặc bị sửa trả `INVALID_CODE`; check-in dùng cập nhật có điều kiện nên một vé chỉ được chấp nhận một lần kể cả khi nhiều máy quét cùng lúc. Mọi lượt quét (kể cả bị từ chối) được ghi vào `CheckInAttempt`.
-
-## Ban tổ chức theo sự kiện
-
-Ban tổ chức (ORGANIZER) chỉ thao tác được trên sự kiện mình là thành viên; ADMIN được phép ở mọi sự kiện. Kiểm tra bằng `EventMemberGuard` (`apps/api/src/auth/event-access.ts`), sai vai trò trả 403.
-
-| Method | Endpoint | Vai trò trong sự kiện | Mục đích |
+| Method | Endpoint | Quyền | Mục đích |
 |---|---|---|---|
-| GET | `/me/event-memberships` | (ORGANIZER) | Sự kiện mình là thành viên kèm vai trò |
-| PATCH | `/events/:id` | OWNER, CO_ORGANIZER | Sửa thông tin (không sửa sự kiện đã huỷ / kết thúc; sức chứa ≥ số đăng ký; `null` = xoá mô tả / địa điểm / bỏ giới hạn sức chứa) |
-| PATCH | `/events/:id/status` `{ status }` | OWNER, CO_ORGANIZER (huỷ: chỉ OWNER) | DRAFT→PUBLISHED (chưa kết thúc), PUBLISHED→DRAFT (chưa có đăng ký), PUBLISHED→COMPLETED (sau giờ kết thúc), DRAFT/PUBLISHED→CANCELLED |
-| GET/POST/PATCH/DELETE | `/events/:eventId/schedules[/:id]` | OWNER, CO_ORGANIZER | Lịch trình: `{ title, startsAt, endsAt, room?, description?, speakerIds? }`; phiên phải nằm trong thời gian sự kiện, diễn giả phải cùng sự kiện; `speakerIds` khi sửa thay toàn bộ |
-| GET/POST/PATCH/DELETE | `/events/:eventId/speakers[/:id]` | OWNER, CO_ORGANIZER | Diễn giả: `{ fullName, title?, organization?, bio?, email?, avatarUrl? }`; email chỉ ban tổ chức thấy, `GET /events/:id` công khai không trả email |
-| GET | `/events/:eventId/members` | OWNER, CO_ORGANIZER, CHECKIN_STAFF | Danh sách ban tổ chức |
-| POST | `/events/:eventId/members` `{ email, role }` | OWNER | Thêm thành viên (tài khoản phải có quyền ORGANIZER; chỉ ADMIN gán OWNER) |
-| PATCH | `/events/:eventId/members/:userId` `{ role }` | OWNER | Đổi vai trò (không đổi OWNER, trừ ADMIN) |
-| DELETE | `/events/:eventId/members/:userId` | OWNER | Gỡ thành viên (sự kiện luôn còn ít nhất một OWNER) |
+| GET | `/events` | Công khai (đọc token nếu có) | ADMIN: tất cả; ORGANIZER: sự kiện mình thuộc + `myRole`; khách/ATTENDEE: không có bản nháp |
+| GET | `/events/:id` | Công khai | Chi tiết kèm lịch trình, diễn giả (không trả email diễn giả); bản nháp chỉ thành viên/ADMIN |
+| POST | `/events` | ORGANIZER | Tạo sự kiện DRAFT, người tạo thành OWNER |
+| PATCH | `/events/:id` | ORGANIZER · MGR | Sửa thông tin; `null` = xoá mô tả/địa điểm/bỏ giới hạn sức chứa |
+| PATCH | `/events/:id/status` | ORGANIZER · MGR (huỷ: OWN) | `{ status }` theo vòng đời trong [ERD §4](erd.md) |
+| GET | `/me/event-memberships` | ORGANIZER | Sự kiện mình là thành viên kèm vai trò |
+| GET | `/events/:eventId/members` | ORGANIZER · ALL | Danh sách ban tổ chức |
+| POST | `/events/:eventId/members` | ORGANIZER · OWN | `{ email, role }`; tài khoản phải là ORGANIZER; chỉ ADMIN gán OWNER |
+| PATCH / DELETE | `/events/:eventId/members/:userId` | ORGANIZER · OWN | Đổi vai trò / gỡ; luôn còn ≥ 1 OWNER |
+| GET / POST | `/events/:eventId/schedules` | ORGANIZER · MGR | `{ title, startsAt, endsAt, room?, description?, speakerIds? }` |
+| PATCH / DELETE | `/events/:eventId/schedules/:id` | ORGANIZER · MGR | `speakerIds` khi sửa thay toàn bộ danh sách |
+| GET / POST | `/events/:eventId/speakers` | ORGANIZER · MGR | `{ fullName, title?, organization?, bio?, email?, avatarUrl? }` |
+| PATCH / DELETE | `/events/:eventId/speakers/:id` | ORGANIZER · MGR | |
 
-Áp dụng cho API có sẵn:
+### 2.3 Đăng ký, vé, check-in (FR-04, FR-05, FR-06)
 
-| API | Vai trò được phép |
+| Method | Endpoint | Quyền | Mục đích |
+|---|---|---|---|
+| POST | `/events/:eventId/registrations` | Đã đăng nhập | Tự đăng ký; `{ userId }` để đăng ký hộ chỉ dành cho MGR |
+| GET / DELETE | `/events/:eventId/registrations/:registrationId` | Chủ đăng ký hoặc MGR | Xem (kèm `qrPayload`) / huỷ. Người khác nhận 404 |
+| GET | `/me/registrations` | Đã đăng nhập | "Vé của tôi" |
+| GET | `/tickets/:qrCode` | Đã đăng nhập | Tra cứu vé; `valid=false` và không trả `qrPayload` nếu đăng ký đã huỷ |
+| POST | `/check-in` | ORGANIZER · ALL | `{ eventId, code, method?: QR\|NFC\|MANUAL, deviceCode? }`; **luôn 200**, xem `result`/`accepted`/`message` |
+| GET | `/check-in/events/:eventId/stats?windowMinutes=` | ORGANIZER · ALL | Tổng lượt, hợp lệ, quét lặp, mã sai, không đủ điều kiện |
+
+Ví dụ phản hồi check-in:
+
+```json
+{
+  "result": "DUPLICATE",
+  "accepted": false,
+  "message": "Vé này đã check-in trước đó",
+  "checkedInAt": "2026-11-20T01:05:12.000Z",
+  "checkInWindow": { "opensAt": "2026-11-19T23:00:00.000Z", "closesAt": "2026-11-20T10:00:00.000Z" },
+  "attendee": { "fullName": "Nguyễn Văn A" }
+}
+```
+
+`result` ∈ ACCEPTED, DUPLICATE, INVALID_CODE, WRONG_EVENT, NOT_ELIGIBLE, OUT_OF_HOURS. Mã QR: `SE1.<ticketId>.<HMAC-SHA256>` ký bằng `TICKET_QR_SECRET`.
+
+### 2.4 Dashboard, nguồn lực, nhật ký (FR-07, FR-09, FR-16)
+
+| Method | Endpoint | Quyền | Mục đích |
+|---|---|---|---|
+| GET | `/events/:eventId/dashboard` | ORGANIZER · MGR | Đăng ký, check-in theo khung, kết quả quét, mật độ khu vực, dự toán – thực chi |
+| GET/POST/PATCH/DELETE | `/resources/staff[/:id]` | ORGANIZER | Danh bạ nhân sự dùng chung |
+| GET/POST/PATCH/DELETE | `/resources/staff-assignments[/:id]` | ORGANIZER · MGR | Phân công theo sự kiện; GET không có `eventId` → chỉ sự kiện mình quản lý |
+| GET/POST/PATCH/DELETE | `/resources/vendors[/:id]` | ORGANIZER | Danh bạ nhà cung cấp |
+| GET/POST/PATCH/DELETE | `/resources/sponsors[/:id]` | ORGANIZER · MGR | Nhà tài trợ theo sự kiện |
+| GET/POST/PATCH/DELETE | `/resources/budget-items[/:id]` | ORGANIZER · MGR | Dự toán; server tính `plannedAmount` |
+| GET/POST/PATCH/DELETE | `/resources/expenses[/:id]` | ORGANIZER · MGR | Thực chi; không gắn được vào dự toán của sự kiện khác |
+| GET | `/resources/budget-summary/:eventId` | ORGANIZER · MGR | So sánh dự toán – thực chi |
+| GET | `/audit-logs?eventId=&from=&to=&page=&pageSize=` | ORGANIZER · MGR | Mặc định 24 giờ gần nhất; tối đa 30 ngày; `pageSize` ≤ 200 |
+
+### 2.5 AI (FR-10 … FR-14)
+
+| Method | Endpoint | Quyền | Chủ sở hữu | Đầu vào chính |
+|---|---|---|---|---|
+| POST | `/ai/project-summary` | ORGANIZER | TV1 | `{ period, completedItems[], pendingItems[], risks[] }` |
+| POST | `/ai/requirements-draft` | ORGANIZER | TV2 | Xem §3 |
+| POST | `/ai/budget-estimate` | ORGANIZER | TV3 | `{ eventType, attendees, days, location, constraints?, currency: VND\|USD }` |
+| POST | `/ai/check-in-analysis` | ⚠️ đang **Công khai** tạm để test Swagger; đích là ORGANIZER · MGR | TV4 | `{ eventId, from, to }` (ISO 8601, ≤ 30 ngày) |
+| POST | `/ai/events/:eventId/feedback-insights` | ORGANIZER · MGR | TV5 | Không có body; server lấy tối đa 500 đánh giá, bỏ định danh |
+
+Mọi phản hồi AI có dạng `{ result, generatedBy, requiresHumanReview: true }`. Chi tiết luật check-in R1–R4 và dữ liệu seed: [ai-requirements.md](ai-requirements.md).
+
+## 3. Chi tiết `POST /ai/requirements-draft` (TV2)
+
+**Request**
+
+| Trường | Kiểu | Bắt buộc | Ràng buộc |
+|---|---|---|---|
+| `problemStatement` | string | ✔ | ≤ 4000 ký tự |
+| `targetUsers` | string | ✔ | ≤ 1000 ký tự |
+| `moduleName` | string | | ≤ 100 ký tự |
+| `businessGoals` | string[] | | ≤ 10 phần tử, mỗi phần tử ≤ 300 ký tự |
+| `constraints` | string[] | | như trên |
+| `maxRequirements` | int | | 3–20, mặc định 10 |
+
+```json
+{
+  "problemStatement": "Ban tổ chức muốn người tham dự nhận nhắc lịch trước mỗi phiên họ quan tâm và có thể đổi phiên khi phiên còn chỗ. Hiện nhân viên phải gọi điện nhắc thủ công.",
+  "targetUsers": "Người tham dự hội thảo; Chủ sự kiện; Đồng tổ chức",
+  "moduleName": "Lịch trình",
+  "businessGoals": ["Giảm cuộc gọi nhắc lịch thủ công"],
+  "constraints": ["Không gửi SMS trả phí trong giai đoạn demo"],
+  "maxRequirements": 6
+}
+```
+
+**Xử lý:** che email / số điện thoại VN / CMND-CCCD → gửi AI kèm danh mục FR-01…FR-17 → hậu kiểm (`requirements-draft.review.ts`).
+
+**Response `result`**
+
+| Trường | Nội dung |
 |---|---|
-| `POST /check-in`, `GET /check-in/events/:eventId/stats` | OWNER, CO_ORGANIZER, CHECKIN_STAFF |
-| `/resources/sponsors`, `staff-assignments`, `budget-items`, `expenses`, `budget-summary` | OWNER, CO_ORGANIZER |
-| AI theo sự kiện (`check-in-analysis`, `events/:eventId/feedback-insights`) | OWNER, CO_ORGANIZER |
-| `GET /audit-logs?eventId=` | OWNER, CO_ORGANIZER |
-| Xem / huỷ đăng ký của người khác | OWNER, CO_ORGANIZER (người tham dự chỉ xem / huỷ đăng ký của mình) |
+| `status` | Luôn `DRAFT_PENDING_BA_REVIEW` |
+| `functionalRequirements[]` | `{ id: "DRAFT-FR-01", sourceId, title, description, actor, priority: MUST\|SHOULD\|COULD\|WONT, acceptanceCriteria[], relatedBaselineIds[], possibleDuplicateOf }` |
+| `nonFunctionalRequirements[]` | `{ id: "DRAFT-NFR-01", category, description, metric }` |
+| `useCases[]` | `{ id: "DRAFT-UC-01", name, primaryActor, preconditions[], mainFlow[], alternativeFlows[], postconditions[], relatedRequirementIds[] }` (tham chiếu đã đổi sang mã DRAFT) |
+| `assumptions[]`, `outOfScope[]`, `businessRules[]`, `businessRisks[]`, `clarificationQuestions[]` | Để BA xác nhận với bên liên quan |
+| `traceability[]` | `{ requirementId, useCaseIds[], baselineIds[] }` |
+| `reviewFindings[]` | `{ code, severity: error\|warning\|info, targetId, message }` – danh sách mã tại [ai-requirements.md](ai-requirements.md#fr-11--ai-bản-nháp-yêu-cầu-tv2) |
+| `quality` | `{ score 0–100, readiness: READY_FOR_BA_REVIEW\|NEEDS_REWORK, counts }` |
+| `redactions` | `{ emails, phones, idNumbers }` số dữ liệu cá nhân đã che |
+| `reviewChecklist[]` | Việc BA phải làm trước khi đưa vào SRS |
+| `srsMarkdown` | Bản Markdown để dán vào tài liệu rà soát |
 
-`GET /events` đọc token nếu có: ADMIN nhận mọi sự kiện, ORGANIZER chỉ nhận sự kiện mình thuộc (kèm `myRole`), khách và người tham dự không thấy bản nháp. `POST /events` đặt người tạo làm OWNER. `/resources/staff` và `/resources/vendors` là danh bạ dùng chung, chỉ cần quyền ORGANIZER.
+## 4. Khác biệt cần thống nhất
+
+| # | Vấn đề | Đề xuất | Người xử lý |
+|---|---|---|---|
+| 1 | `POST /ai/check-in-analysis` đang `@Public()` | Bỏ `@Public()`, bật lại `@EventRoles(EVENT_ROLES.MANAGERS)` trước demo | TV4 |
+| 2 | Test case CIN-001…005 dùng `qrCode/deviceId`, kết quả `ALREADY_USED/INVALID` và yêu cầu `deviceId` bắt buộc; API thực nhận `code/deviceCode` (tuỳ chọn) và trả 6 giá trị `result` | Cập nhật test case theo hợp đồng ở §2.3 | TV5 |
+| 3 | Chưa có `POST /events/:eventId/feedback` | Thêm endpoint theo FR-08 | TV4/TV3 (theo PM phân) |
+| 4 | Chưa có API quản lý `Device` | Thêm CRUD thiết bị theo FR-17.1 nếu còn thời gian | TV4 |
