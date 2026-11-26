@@ -11,6 +11,9 @@ import { BUDGET_ESTIMATE_PROMPT } from "./prompts/budget-estimate.prompt";
 import { CHECKIN_ANALYSIS_PROMPT } from "./prompts/checkin-analysis.prompt";
 import { FEEDBACK_INSIGHTS_PROMPT } from "./prompts/feedback-insights.prompt";
 import { createCheckInAnalysisTimeoutFallback } from "./check-in-analysis.timeout-fallback";
+import { REQUIREMENTS_BASELINE } from "./requirements-baseline";
+import { REQUIREMENTS_DRAFT_POLICY } from "./requirements-draft.policy";
+import { RedactionCounts, redactPersonalData, reviewRequirementsDraft } from "./requirements-draft.review";
 
 class AiRequestTimeoutError extends Error {
   constructor() {
@@ -31,8 +34,35 @@ export class AiService {
     return this.generateJson(PROJECT_SUMMARY_PROMPT, input);
   }
 
-  requirementsDraft(input: RequirementsDraftInput) {
-    return this.generateJson(REQUIREMENTS_DRAFT_PROMPT, input);
+  /**
+   * TV2 – BA: che dữ liệu cá nhân → gửi LLM kèm danh mục yêu cầu đã chốt → hậu kiểm chất lượng/trùng lặp/truy vết.
+   * Kết quả luôn là bản nháp chờ BA duyệt, không tự ghi vào SRS.
+   */
+  async requirementsDraft(input: RequirementsDraftInput) {
+    const redactions: RedactionCounts = { emails: 0, phones: 0, idNumbers: 0 };
+    const redact = (text: string) => redactPersonalData(text, redactions);
+    const maxRequirements = input.maxRequirements ?? REQUIREMENTS_DRAFT_POLICY.defaultMaxRequirements;
+    const moduleName = input.moduleName ? redact(input.moduleName) : null;
+
+    const generated = await this.generateJson(REQUIREMENTS_DRAFT_PROMPT, {
+      problemStatement: redact(input.problemStatement),
+      targetUsers: redact(input.targetUsers),
+      moduleName,
+      businessGoals: (input.businessGoals ?? []).map(redact),
+      constraints: (input.constraints ?? []).map(redact),
+      maxRequirements,
+      baseline: REQUIREMENTS_BASELINE.map(({ id, title }) => ({ id, title })),
+    });
+
+    return {
+      ...generated,
+      result: reviewRequirementsDraft(generated.result, {
+        baseline: REQUIREMENTS_BASELINE,
+        maxRequirements,
+        moduleName,
+        redactions,
+      }),
+    };
   }
 
   async budgetEstimate(input: BudgetEstimateInput) {

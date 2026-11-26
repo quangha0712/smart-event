@@ -3,7 +3,7 @@
 ## Tính năng và chủ sở hữu
 
 - TV1: `POST /api/ai/project-summary`, prompt `prompts/project-summary.prompt.ts`.
-- TV2: `POST /api/ai/requirements-draft`, prompt `prompts/requirements-draft.prompt.ts`.
+- TV2: `POST /api/ai/requirements-draft`, prompt `prompts/requirements-draft.prompt.ts`; che dữ liệu cá nhân và hậu kiểm trong `requirements-draft.review.ts` (chính sách `requirements-draft.policy.ts`, danh mục SRS `requirements-baseline.ts`). Khi sửa SRS phải cập nhật `requirements-baseline.ts`. Test: `test/requirements-draft.spec.ts`.
 - TV3: `POST /api/ai/budget-estimate`, prompt `prompts/budget-estimate.prompt.ts` và provider dùng chung.
 - TV4: `POST /api/ai/check-in-analysis`, prompt `prompts/checkin-analysis.prompt.ts`.
 - TV5: `POST /api/ai/events/:eventId/feedback-insights`, prompt `prompts/feedback-insights.prompt.ts`, UI trong `apps/web/src/features/ai/`.
